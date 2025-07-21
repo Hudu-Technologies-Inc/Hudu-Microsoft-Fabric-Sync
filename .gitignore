@@ -1,0 +1,68 @@
+# === Logs and Temp Files ===
+logs/
+logs*/                # Any directory starting with 'logs'
+*.log                 # All .log files
+**/*.log              # Any .log file anywhere
+**/Sync.log           # Specific sync logs
+tmp/
+tmp*/                 # Any tmp folder
+**/tmp*/              # Any nested tmp folder
+
+# === Error Output Directories ===
+errored/
+*/errored/
+logs/errored*
+**/errored/*
+
+# === PowerShell Environment Files ===
+environ*.ps1
+*environ*.ps1
+*.env
+.env
+.env.*
+
+# === PowerShell Specific ===
+*.ps1~
+*.psm1~
+*.psd1~
+*.ps1xml
+*.pssc
+*.psrc
+
+# === OS/System/Editor Noise ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDEs and Editors ===
+.vscode/
+.idea/
+*.code-workspace
+
+# === Node/npm artifacts (if applicable) ===
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# === Compiled/Generated Files ===
+*.zip
+*.bak
+*.tmp
+*.swp
+*.swo
+*.orig
+*.retry
+*.pid
+
+# === Git ===
+*.rej
+*.patch
+*.un~
+*.merge_file*
+
+# === Output from testing/scripts ===
+output/
+out/
+build/
+dist/
+coverage/
