@@ -7,20 +7,24 @@ $workdir = $PSScriptRoot
 $defaultSchemaPath = Join-Path $workdir "My-Schema.ps1"
 
 if (-not $schemaFile -or -not (Test-Path $schemaFile)) {
-    if (Test-Path $defaultSchemaPath) {
-        $schemaFile = $defaultSchemaPath
-    } else {
-        Write-Error "Schema file was not provided and default schema file '$defaultSchemaPath' not found."
-        exit 1
+    $schemaFile = $defaultSchemaPath
+}
+
+Write-Host "Fabric Sync started with schema file: $schemaFile"
+. $schemaFile
+
+$DatasetSchemaJson = @{
+    name   = $DataSetName ?? "DefaultDataset"
+    tables = @()
+}
+foreach ($table in $HuduSchema.Tables) {
+    $DatasetSchemaJson.tables += @{
+        name    = $table.name
+        columns = $table.columns
     }
 }
 
-Write-Host "Fabric Sync started with schema file: $schemaFile". $schemaFile
-$dryRun = $dryRun ?? $false
-
-
-# If you are using AZ keystore (reccomended, fill out) the line that starts with AZVault_name
-
+$DatasetSchemaJson = $DatasetSchemaJson | ConvertTo-Json -Depth 10
 
 foreach ($file in $(Get-ChildItem -Path ".\helpers" -Filter "*.ps1" -File | Sort-Object Name)) {
     Write-Host "Importing: $($file.Name)" -ForegroundColor DarkBlue
@@ -56,7 +60,7 @@ clear-host
 Start-Process "https://microsoft.com/devicelogin"
 $tokenResult = $tokenResult ?? $(Get-MsalToken -ClientId $clientId -TenantId $tenantId -DeviceCode -Scopes $scope)
 $accessToken = $accessToken ?? $tokenResult.AccessToken
-Write-Host "$(Decode-JwtTokenPayload -Token $accessToken)"
+# Write-Host "$(Decode-JwtTokenPayload -Token $accessToken)"
 
 #### Part 2- Find or Create Workspace and Dataset!
 ##
@@ -73,21 +77,19 @@ set-printandlog -message "Using Dataset $($Dataset | ConvertTo-Json -Depth 10)" 
 ##
 #
 $fetchIdx=0
-foreach ($item in $HuduSchema.Fetch) {
+foreach ($f in $HuduSchema.Fetch) {
     $fetchIdx=$fetchIdx +1
-    $completionPercentage=Get-PercentDone -Current $fetchIdx -Total $HuduFetchMap.count
-    $result = & $item.Command
-    Set-Variable -Name $item.Name -Value $result
-    Set-PrintAndLog "$($item.Name): $($result?.Count ?? 'null')" -Color Cyan
+    $completionPercentage=Get-PercentDone -Current $fetchIdx -Total $HuduSchema.Fetch.count
+    $name = $f.Name
+    Write-Host "Fetching: $name"
+    $result = & $f.Command
+    if ($f.Filter) {
+        $result = & $f.Filter.Invoke($result)
+    }
+    Set-Variable -Name $name -Value $result -Scope Global
+    Set-PrintAndLog "$name count: $($result?.Count ?? 'null')" -Color Cyan
+    Write-Progress -Activity "Fetching $title... ($fetchIdx / $($HuduSchema.Fetch.count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
 }
-# 3.5- transform your data before calculation if desired
-if ($all_expirations) {
-    $all_expirations = $all_expirations | ForEach-Object {
-        $_ | Add-Member -MemberType NoteProperty -Name ParsedExpirationDate `
-            -Value ([DateTime]::ParseExact($_.date, "yyyy-MM-dd", $null)) -PassThru
-    } | Sort-Object ParsedExpirationDate
-}
-
 #### Part 4- Dynamically Submit Data based on how you configured your schema nd tabulation map
 ##
 #
