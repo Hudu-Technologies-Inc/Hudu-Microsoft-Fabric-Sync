@@ -159,7 +159,6 @@ foreach ($table in $HuduSchema.Tables) {
                         $perCompanyOriginals = @($entries | Select-Object -ExpandProperty __original) | Where-Object {
                             $_.company_id -eq $company.id
                         }
-
                         # Reapply the original filter on this subset
                         $reFiltered = & $fetchDef.Filter $perCompanyOriginals
 
