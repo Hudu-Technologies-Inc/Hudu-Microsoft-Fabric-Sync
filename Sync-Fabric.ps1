@@ -86,31 +86,71 @@ Set-PrintAndLog -message "Using Dataset $($DataSet | ConvertTo-Json -Depth 10)" 
 #### Part 3- Get useful source data and Tabulate it
 ##
 #
-$Results = @{}
+$AllResults = @()
 $fetchIdx = 0
+$allCompanies = Get-HuduCompanies
 
-foreach ($f in $HuduSchema.Fetch) {
-    $fetchIdx++
-    $completionPercentage = Get-PercentDone -Current $fetchIdx -Total $HuduSchema.Fetch.Count
+foreach ($company in $allCompanies) {
+    $Results = @{}
+    
+    foreach ($f in $HuduSchema.Fetch) {
+        $fetchIdx++
+        $completionPercentage = Get-PercentDone -Current $fetchIdx -Total $HuduSchema.Fetch.Count
 
-    $name = $f.Name
-    if (-not $name -or -not $f.Command -or -not $f.Filter) {
-        Write-Warning "Malformed fetch entry: $($f | Out-String)"
-        continue
+        $name = $f.Name
+        if (-not $name -or -not $f.Command -or -not $f.Filter) {
+            Write-Warning "Malformed fetch entry: $($f | Out-String)"
+            continue
+        }
+
+        $table = $HuduSchema.Tables | Where-Object { $_.columns -match $name }
+        $isPerCompany = $table.perCompany -eq $true
+
+        if ($isPerCompany) {
+            Write-Host "Fetching (per-company): $name for company $($company.name)"
+
+            $raw = & $f.Command
+            if ($raw -is [System.Collections.IEnumerable]) {
+                $raw = $raw | Where-Object { $_.company_id -eq $company.id }
+            }
+
+            $filtered = & $f.Filter $raw
+
+            # Inject company_id
+            if ($filtered -is [pscustomobject]) {
+                Add-Member -InputObject $filtered -MemberType NoteProperty -Name "company_id" -Value $company.id -Force
+            }
+
+            foreach ($prop in $filtered.PSObject.Properties) {
+                $Results[$prop.Name] = $prop.Value
+            }
+
+            Set-PrintAndLog "$name → $($filtered | ConvertTo-Json -Compress)" -Color Cyan
+        }
+        else {
+            # Only fetch global values once (on first loop)
+            if ($company -eq $allCompanies[0]) {
+                Write-Host "Fetching (global): $name"
+
+                $raw = & $f.Command
+                $filtered = & $f.Filter $raw
+
+                foreach ($prop in $filtered.PSObject.Properties) {
+                    $Results[$prop.Name] = $prop.Value
+                }
+
+                Set-PrintAndLog "$name → $($filtered | ConvertTo-Json -Compress)" -Color Cyan
+            }
+        }
+
+        Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
     }
 
-    Write-Host "Fetching: $name"
-
-    $raw = & $f.Command
-    $filtered = & $f.Filter $raw
-
-    foreach ($prop in $filtered.PSObject.Properties) {
-        $Results[$prop.Name] = $prop.Value
-    }
-
-    Set-PrintAndLog "$name → $($filtered | ConvertTo-Json -Compress)" -Color Cyan
-    Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
+    $AllResults += [pscustomobject]$Results
 }
+
+# Then later, push $AllResults to Fabric table
+
 #### Part 4- Dynamically Submit Data based on how you configured your schema nd tabulation map
 ##
 #
@@ -136,7 +176,7 @@ foreach ($tableSchema in $HuduSchema.Tables) {
             -Token $accessToken `
             -DatasetId $dataset `
             -WorkspaceId $workspace.id `
-            -Values $Results
+            -Values $AllResults
 
 
     } catch {

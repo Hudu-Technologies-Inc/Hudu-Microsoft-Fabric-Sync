@@ -10,8 +10,8 @@ $WorkspaceName = "myworkspace"
 
 
 $HuduSchema = @{
-    WorkspaceName = "myworkspacename"
-    DatasetName   = "mydatasetname"
+    WorkspaceName = "myworkspaceasdasdffasd"
+    DatasetName   = "mydatasetasdfaasdfs"
     Fetch = @(
         @{
             Name    = 'all_companies'
@@ -79,6 +79,7 @@ $HuduSchema = @{
         @{
             Name = 'num_users'
             Command = { Get-HuduUsers }
+            dataType = 'Int64'
             Filter = {
                 param ($items)
                 [pscustomobject]@{ num_users = $items.Count }
@@ -87,6 +88,7 @@ $HuduSchema = @{
         @{
             Name = 'num_admins'
             Command = { Get-HuduUsers }
+            dataType = 'Int64'
             Filter = {
                 param ($users)
                 [pscustomobject]@{ num_admins = ($users | Where-Object { $_.security_level -eq 'admin' }).Count }
@@ -94,6 +96,7 @@ $HuduSchema = @{
         },
         @{
             Name = 'num_superadmins'
+            dataType = 'Int64'
             Command = { Get-HuduUsers }
             Filter = {
                 param ($users)
@@ -103,6 +106,7 @@ $HuduSchema = @{
         @{
             Name = 'top_author_email'
             Command = { Get-HuduUsers }
+            dataType = 'String'
             Filter = {
                 param ($users)
                 [pscustomobject]@{ top_author_email = ($users | Sort-Object { [int]$_.score_all_time } -Descending | Select-Object -First 1).email }
@@ -111,6 +115,7 @@ $HuduSchema = @{
         @{
             Name = 'public_articles'
             Command = { Get-HuduArticles }
+            dataType = 'Int64'
             Filter = {
                 param ($articles)
                 [pscustomobject]@{ public_articles = ($articles | Where-Object { $_.sharing_enabled -eq $true }).Count }
@@ -119,6 +124,7 @@ $HuduSchema = @{
         @{
             Name = 'old_passwords'
             Command = { Get-HuduPasswords }
+            dataType = 'Int64'
             Filter = {
                 param ($pw)
                 $threshold = (Get-Date).AddMonths(-6)
@@ -127,6 +133,7 @@ $HuduSchema = @{
         },
         @{
             Name = 'weak_passwords'
+            dataType = 'Int64'
             Command = { Get-HuduPasswords }
             Filter = {
                 param ($pw)
@@ -135,6 +142,7 @@ $HuduSchema = @{
         },
         @{
             Name = 'archived_assets'
+            dataType = 'Int64'
             Command = { Get-HuduAssets }
             Filter = {
                 param ($assets)
@@ -143,6 +151,7 @@ $HuduSchema = @{
         },
         @{
             Name = 'finished_articles'
+            dataType = 'Int64'
             Command = { Get-HuduArticles }
             Filter = {
                 param ($articles)
@@ -152,6 +161,7 @@ $HuduSchema = @{
         @{
             Name = 'draft_articles'
             Command = { Get-HuduArticles }
+            dataType = 'Int64'
             Filter = {
                 param ($articles)
                 [pscustomobject]@{ draft_articles = ($articles | Where-Object { $_.Draft -eq $true }).Count }
@@ -160,6 +170,7 @@ $HuduSchema = @{
         @{
             Name = 'short_articles'
             Command = { Get-HuduArticles }
+            dataType = 'Int64'
             Filter = {
                 param ($articles)
                 [pscustomobject]@{ short_articles = ($articles | Where-Object { "$($_.content)".Length -lt 250 }).Count }
@@ -168,7 +179,7 @@ $HuduSchema = @{
     )
     Tables = @(
         @{
-            name        = "mydatasetname"
+            name        = "mydatasetasdfaasdfs"
             perCompany  = $true
             columns     = @(
                 "all_assets",

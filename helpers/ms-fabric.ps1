@@ -127,74 +127,35 @@ function Invoke-HuduTabulation {
 
         [Parameter(Mandatory)]
         [string]$WorkspaceId,
-        
-        [Parameter(Mandatory)]
-        [string]$TableName,
 
         [Parameter(Mandatory)]
-        [hashtable]$Values
-
+        [array]$Values  # changed from hashtable to array!
     )
 
+    Write-Host "`n[+] Pushing table: $($Schema.name)" -ForegroundColor Cyan
 
-    Write-Host "`n[+]Pushing : $TableName..." -ForegroundColor Cyan
-
-    # Run tabulation function
-        # Deduplicate and clean nulls (flatten single-level only)
-        $safeData = @()
+    $safeData = @()
 
     if ($Schema.perCompany) {
-        foreach ($company in $all_companies) {
-            $row = @{}
-            if ($Schema.columns -contains 'company_id') {
-                $row.company_id = $company.id
-            }
-
-        foreach ($colName in $Schema.columns) {
-            $val = $Values[$colName]
-
-            if ($val -is [hashtable] -or $val -is [pscustomobject]) {
-                $resolved = $val.$colName
-            } elseif ($val -is [array]) {
-                $resolved = ($val | Where-Object { $_.company_id -eq $company.id }).Count
-            } else {
-                $resolved = $val
-            }
-
-            $row[$colName] = if ($null -ne $resolved) { $resolved } elseif ($resolved -is [string]) { "" } else { 0 }
-        }
-
-        $safeData += [pscustomobject]$row
-        Set-PrintAndLog "Tabulated row:`n$($row | ConvertTo-Json -Depth 10)" -Color Yellow
-    }
-    } else {
-            $row = @{}
+        foreach ($row in $Values) {
+            $safeRow = @{}
             foreach ($colName in $Schema.columns) {
-                $val = $Values[$colName]
-
-                if ($val -is [hashtable] -or $val -is [pscustomobject]) {
-                    $val = $val.$colName
-                }
-
-                $row[$colName] = if ($null -ne $val) { $val } elseif ($val -is [string]) { "" } else { 0 }
+                $val = $row.$colName
+                $safeRow[$colName] = if ($null -ne $val) { $val } elseif ($val -is [string]) { "" } else { 0 }
             }
-            $safeData += [pscustomobject]$row
-            Set-PrintAndLog "Tabulated row:`n$($row | ConvertTo-Json -Depth 10)" -Color Yellow
+            $safeData += [pscustomobject]$safeRow
+            Set-PrintAndLog "Tabulated row:`n$($safeRow | ConvertTo-Json -Depth 10)" -Color Yellow
         }
-        foreach ($k in $row.Keys) {
-            $val = $row[$k]
-            if ($null -eq $val -or ($val -is [string] -and $val -eq '')) {
-                Set-PrintAndLog "WARNING: Column [$k] is null or empty." -Color DarkYellow
-            }
+    } else {
+        $safeRow = @{}
+        foreach ($colName in $Schema.columns) {
+            $val = $Values[0].$colName
+            $safeRow[$colName] = if ($null -ne $val) { $val } elseif ($val -is [string]) { "" } else { 0 }
         }
-    # Compose parameters
-    $Params = @{
-        workspaceId = $workspaceId
-        datasetId = $DatasetId
-        TableName = $TableName
-        Token     = $Token
-        rows      = $safeData
+        $safeData += [pscustomobject]$safeRow
+        Set-PrintAndLog "Tabulated row:`n$($safeRow | ConvertTo-Json -Depth 10)" -Color Yellow
     }
-    # Push to Power BI (or your target)
-    Push-DataToTable @Params
+
+    # Push
+    Push-DataToTable -workspaceId $WorkspaceId -datasetId $DatasetId -tableName $Schema.name -rows $safeData -token $Token
 }
