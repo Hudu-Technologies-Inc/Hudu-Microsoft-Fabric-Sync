@@ -76,39 +76,61 @@ Set-PrintAndLog -message "Using Dataset $($DataSet | ConvertTo-Json -Depth 10)" 
 #### Part 3- Get useful source data and Tabulate it
 ##
 #
+$Results = @{}
 $fetchIdx = 0
+
 foreach ($f in $HuduSchema.Fetch) {
     $fetchIdx++
     $completionPercentage = Get-PercentDone -Current $fetchIdx -Total $HuduSchema.Fetch.Count
+
     $name = $f.Name
-    Write-Host "Fetching: $name"
-
-    # Run the fetch command
-    $result = & $f.Command
-
-    # If there's a filter, apply it
-    if ($f.ContainsKey("Filter") -and $null -ne $f.Filter) {
-        $result = & $f.Filter $result
+    if (-not $name -or -not $f.Command -or -not $f.Filter) {
+        Write-Warning "Malformed fetch entry: $($f | Out-String)"
+        continue
     }
 
-    # Store to global variable
-    Set-Variable -Name $name -Value $result
+    Write-Host "Fetching: $name"
 
-    Set-PrintAndLog "$name count: $($result?.Count ?? 'null')" -Color Cyan
+    $raw = & $f.Command
+    $filtered = & $f.Filter $raw
+
+    foreach ($prop in $filtered.PSObject.Properties) {
+        $Results[$prop.Name] = $prop.Value
+    }
+
+    Set-PrintAndLog "$name → $($filtered | ConvertTo-Json -Compress)" -Color Cyan
     Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
 }
 #### Part 4- Dynamically Submit Data based on how you configured your schema nd tabulation map
 ##
 #
+foreach ($tableSchema in $HuduSchema.Tables) {
+    $row = @{}
+    foreach ($col in $tableSchema.columns) {
+        $row[$col] = $Results[$col]  # If missing, will be $null
+    }
 
-foreach ($tableschema in $DatasetSchema.tables) {
+    Write-Host "[+] Tabulating: $($tableSchema.name)..."
+    Write-Host ($row | ConvertTo-Json -Depth 5 -Compress)
+
     try {
-    Invoke-HuduTabulation -Schema $tableSchema -tableName $tableSchema.Name -Token $accessToken -DatasetId $Dataset -WorkspaceId $workspace.id
+        Invoke-HuduTabulation `
+            -Schema     $tableSchema `
+            -TableName  $tableSchema.name `
+            -Token      $accessToken `
+            -DatasetId  $Dataset `
+            -WorkspaceId $workspace.id `
+            -Row        $row
     } catch {
         Write-ErrorObjectsToFile -Name "Tabulation-Err" -ErrorObject @{
-            Func   = $Dataset
-            Schema = $Schema
+            Table  = $tableSchema.name
+            Row    = $row
             Error  = $_
         }
     }
+}
+
+Write-Host "`n=== Final Tabulation Values ==="
+$Results.GetEnumerator() | Sort-Object Name | ForEach-Object {
+    Write-Host "$($_.Name): $($_.Value)"
 }

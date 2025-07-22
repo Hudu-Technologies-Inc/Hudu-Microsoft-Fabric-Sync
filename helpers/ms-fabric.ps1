@@ -131,7 +131,6 @@ function Invoke-HuduTabulation {
         [string]$tablename   
     )
 
-    $TableName = if ($Schema.TableName) { $Schema.TableName } elseif ($Schema.name) { $Schema.name } else { "UnnamedTable" }
 
     Write-Host "`n[+] Tabulating: $TableName..." -ForegroundColor Cyan
 
