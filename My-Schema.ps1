@@ -8,9 +8,10 @@ $tenantIdSecretName = "tenantid-secretname"
 $HuduBaseUrl= "yoururl.huducloud.com"
 $WorkspaceName = "myworkspace"
 
+
 $HuduSchema = @{
-    WorkspaceName = "myworkspace"
-    DatasetName   = "mydataset"
+    WorkspaceName = "myworkspacename"
+    DatasetName   = "mydatasetname"
     Fetch = @(
         @{
             Name    = 'all_companies'
@@ -163,6 +164,29 @@ $HuduSchema = @{
                 param ($articles)
                 [pscustomobject]@{ short_articles = ($articles | Where-Object { "$($_.content)".Length -lt 250 }).Count }
             }
+        }
+    )
+    Tables = @(
+        @{
+            name        = "mydatasetname"
+            perCompany  = $true
+            columns     = @(
+                "all_assets",
+                "all_articles",
+                "all_processes",
+                "all_websites",
+                "all_expirations",
+                "all_magic_dashes",
+                "top_author_email",
+                "public_articles",
+                "old_passwords",
+                "weak_passwords",
+                "archived_assets",
+                "finished_articles",
+                "draft_articles",
+                "short_articles"
+            )
+            
         }
     )
 }

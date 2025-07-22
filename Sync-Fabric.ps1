@@ -60,7 +60,17 @@ $SchemaResult = Convert-HuduSchemaToDataset -HuduSchema $HuduSchema
 $WorkspaceName     = $SchemaResult.WorkspaceName
 $DatasetName       = $SchemaResult.DatasetName
 $DatasetSchema     = $SchemaResult.DatasetDefinition
-$DatasetSchemaJson = $SchemaResult.DatasetDefinition | ConvertTo-Json -Depth 10
+
+# Inject company_id into each perCompany table
+foreach ($table in $DatasetSchema.tables) {
+    if ($table.perCompany -and -not ($table.columns | Where-Object { $_.name -eq 'company_id' })) {
+        $table.columns = @(
+            @{ name = 'company_id'; dataType = 'Int64' }
+        ) + $table.columns
+    }
+}
+
+$DatasetSchemaJson = $DatasetSchema | ConvertTo-Json -Depth 10
 
 # Set Workspace
 $Workspace = Set-Workspace -name $WorkspaceName -token $accessToken
@@ -110,20 +120,28 @@ foreach ($tableSchema in $HuduSchema.Tables) {
         $row[$col] = $Results[$col]  # If missing, will be $null
     }
 
-    Write-Host "[+] Tabulating: $($tableSchema.name)..."
-    Write-Host ($row | ConvertTo-Json -Depth 5 -Compress)
+    Write-Host "[*] Tabulating: $($tableSchema.Name)..."
+    foreach ($key in $Results.Keys) {
+        Set-Variable -Name $key -Value $Results[$key] -Scope Local
+        Set-PrintAndLog "Bound variable `$${key} = $($Results[$key])" -Color DarkGray
+    }
+    if ($druRun) {
+        continue
+    }
 
     try {
-        Invoke-HuduTabulation `
-            -Schema     $tableSchema `
-            -TableName  $tableSchema.name `
-            -Token      $accessToken `
-            -DatasetId  $Dataset `
+        invoke-HuduTabulation `
+            -Schema $tableSchema `
+            -TableName $tableSchema.name `
+            -Token $accessToken `
+            -DatasetId $dataset `
             -WorkspaceId $workspace.id `
-            -Row        $row
+            -Values $Results
+
+
     } catch {
         Write-ErrorObjectsToFile -Name "Tabulation-Err" -ErrorObject @{
-            Table  = $tableSchema.name
+            Table  = $tableSchema
             Row    = $row
             Error  = $_
         }
