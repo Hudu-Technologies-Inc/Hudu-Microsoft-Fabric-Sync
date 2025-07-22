@@ -5,7 +5,32 @@ function Get-EnsuredModule {
     }
     Import-Module $Name -Force
 }
+function Unwrap-SinglePropertyWrapper {
+    param (
+        [Parameter(Mandatory)]
+        $InputObject
+    )
 
+    $obj = $InputObject
+    write-host "before: $($obj | ConvertTo-Json -depth 6 | Out-String)"
+    while (
+        $obj -isnot [string] -and
+        ($obj -is [hashtable] -or $obj -is [pscustomobject]) -and
+        $obj.PSObject.Properties.Count -eq 1
+    ) {
+        $value = $obj.PSObject.Properties[0].Value
+
+        # Break loop if it's scalar or array
+        if ($value -is [string] -or $value -is [int] -or $value -is [array]) {
+            break
+        }
+        
+        $obj = $value
+    }
+    write-host "after: $($obj | ConvertTo-Json -depth 6 | Out-String)"
+    read-host
+    return $obj
+}
 function Unset-Vars {
     param (
         [string]$varname,

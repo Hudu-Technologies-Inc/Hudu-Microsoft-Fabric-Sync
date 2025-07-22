@@ -102,50 +102,24 @@ foreach ($f in $HuduSchema.Fetch) {
         Write-Warning "Malformed fetch entry: $($f | Out-String); SKIPPING!"
         continue
     }
-    # if this table is set up as being per-company
-    if ($f.perCompany) {
-        foreach ($company in $allCompanies) {
-            Write-Host "Fetching: $name (per-company: $($company.name))"
-            $raw = & $f.Command
-            if ($raw -is [System.Collections.IEnumerable]) {
-                $raw = $raw | Where-Object { $_.company_id -eq $company.id }
-            }
-            $filtered = & $f.Filter $raw
-            $row = @{}
+     
+    Write-Host "Fetching: $name"
+    $raw = & $f.Command
+    $filtered = & $f.Filter $raw
 
-            foreach ($prop in $filtered.PSObject.Properties) {
-                $row[$prop.Name] = $prop.Value
-            }
-            #auto-inject company id and name into any per-company metrics
-            $row["company_id"] = $company.id
-            $row["company_name"] = $company.name
-
-            if (-not $AllResults.ContainsKey($name)) {
-                $AllResults[$name] = @()
-            }
-            $AllResults[$name] += [pscustomobject]$row
-
-            Set-PrintAndLog "$name → $($row | ConvertTo-Json -Compress)" -Color Cyan
-        }
-    # if this table is set up as generalized data
-    } else {
-        Write-Host "Fetching: $name (global)"
-        $raw = & $f.Command
-        $filtered = & $f.Filter $raw
-
-        $row = @{}
-        foreach ($prop in $filtered.PSObject.Properties) {
-            $row[$prop.Name] = $prop.Value
-            $Results[$prop.Name] = $prop.Value
-        }
-
-        if (-not $AllResults.ContainsKey($name)) {
-            $AllResults[$name] = @()
-        }
-        $AllResults[$name] += [pscustomobject]$row
-
-        Set-PrintAndLog -message "$name → $($row | ConvertTo-Json -Compress)" -Color Cyan
+    $row = @{}
+    foreach ($prop in $filtered.PSObject.Properties) {
+        $row[$prop.Name] = $prop.Value
+        $Results[$prop.Name] = $prop.Value
     }
+
+    if (-not $AllResults.ContainsKey($name)) {
+        $AllResults[$name] = @()
+    }
+    $AllResults[$name] += [pscustomobject]$row
+
+    Set-PrintAndLog -message "$name → $($row | ConvertTo-Json -Compress)" -Color Cyan
+
 
     Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
 }
@@ -165,8 +139,13 @@ foreach ($table in $HuduSchema.Tables) {
             foreach ($col in $table.columns) {
                 $entries = $AllResults[$col]
                 if (-not $entries) { continue }
-                $match = $entries | Where-Object { $_.company_id -eq $company.id }
-                $row[$col] = if ($match) { $match[0].$col } else { 0 }
+                # $row[$col] = ($entries | Where-Object { $_.company_id -eq $company.id }).$col ?? 0
+                $row[$col] = (
+                    $entries | Where-Object {
+                        $u = Unwrap-SinglePropertyWrapper -InputObject $_
+                        $u.company_id -eq $company.id
+                    }
+                ).$col ?? 0
             }
             $finalRows += [pscustomobject]$row
         }
