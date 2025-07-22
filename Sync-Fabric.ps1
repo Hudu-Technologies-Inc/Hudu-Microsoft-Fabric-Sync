@@ -112,6 +112,8 @@ foreach ($f in $HuduSchema.Fetch) {
         $row[$prop.Name] = $prop.Value
         $Results[$prop.Name] = $prop.Value
     }
+    Set-PrintAndLog -message "$name → $($row | ConvertTo-Json -Compress)" -Color Cyan
+
     $row.__original = $raw
 
 
@@ -120,7 +122,6 @@ foreach ($f in $HuduSchema.Fetch) {
     }
     $AllResults[$name] += [pscustomobject]$row
 
-    Set-PrintAndLog -message "$name → $($row | ConvertTo-Json -Compress)" -Color Cyan
 
 
     Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
@@ -145,7 +146,7 @@ foreach ($table in $HuduSchema.Tables) {
 
                 # Try to match company directly on filtered result
                 $matched = $entries | Where-Object {
-                    $u = Unwrap-SinglePropertyWrapper -InputObject $_
+                    $u = $_
                     $u.company_id -eq $company.id
                 }
 
