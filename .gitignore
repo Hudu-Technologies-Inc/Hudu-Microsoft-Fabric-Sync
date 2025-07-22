@@ -8,6 +8,12 @@ tmp/
 tmp*/                 # Any tmp folder
 **/tmp*/              # Any nested tmp folder
 
+# === Schemas ===
+!My-Schema.ps1
+*[Ss]chema*.ps1
+**/*[Ss]chema*.ps1
+*[Ss]chema*.ps1
+
 # === Error Output Directories ===
 errored/
 */errored/

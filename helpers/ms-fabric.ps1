@@ -3,6 +3,45 @@ $ApplicationPermissions = @("Tenant.Read.All","Dataset.ReadWrite.All","Workspace
 $scope= "https://analysis.windows.net/powerbi/api/.default"
 # fallback values for improper or null workspace/dataset name
 
+function Convert-HuduSchemaToDataset {
+    param (
+        [Parameter(Mandatory)]
+        $HuduSchema
+    )
+
+    $FetchMap = @{}
+    foreach ($f in $HuduSchema.Fetch) {
+        $FetchMap[$f.Name] = $f
+    }
+
+    $Tables = @()
+    foreach ($table in $HuduSchema.Tables) {
+        $columns = @()
+        foreach ($colName in $table.columns) {
+            $fetch = $FetchMap[$colName]
+            $columns += [pscustomobject]@{
+                name     = $colName
+                dataType = $fetch.dataType ?? "String"
+            }
+        }
+
+        $Tables += [pscustomobject]@{
+            name    = $table.name
+            columns = $columns
+        }
+    }
+
+    return [pscustomobject]@{
+        WorkspaceName     = $HuduSchema.WorkspaceName
+        DatasetName       = $HuduSchema.DatasetName
+        DatasetDefinition = [pscustomobject]@{
+            name         = $HuduSchema.DatasetName
+            defaultMode  = "Push"
+            tables       = $Tables
+        }
+    }
+}
+
 function Set-Workspace {
     param (
         [string]$name,
@@ -63,73 +102,89 @@ function Push-DataToTable {
         [string]$token
     )
 
+    $rows = @($rows) # Force into array
     $uri = "https://api.powerbi.com/v1.0/myorg/groups/$workspaceId/datasets/$datasetId/tables/$tableName/rows"
 
-    $body = @{ rows = $rows } | ConvertTo-Json -Depth 10
-    Set-PrintAndLog -message "Pushing $($rows.Count) rows to table [$tableName]..."
+    $payload = @{rows = $rows} | ConvertTo-Json -Depth 10
+    Set-PrintAndLog -message "Pushing $($rows.Count) rows to table [$tableName]... $payload"
 
     $result = Invoke-RestMethod -Uri $uri -Method Post -Headers @{ Authorization = "Bearer $token" } `
-        -ContentType "application/json" -Body $body
+        -ContentType "application/json" -Body $payload
 
     Set-PrintAndLog -message "Push result: $($result | Out-String)"
 }
 
-function Invoke-TabulationTask {
+function Invoke-HuduTabulation {
     param (
         [Parameter(Mandatory)]
-        $Tab,
+        [pscustomobject]$Schema,
 
         [Parameter(Mandatory)]
-        [array]$AllCompanies,
-
-        [Parameter(Mandatory)]
-        [string]$AccessToken,
+        [string]$Token,
 
         [Parameter(Mandatory)]
         [string]$DatasetId,
 
-        [Parameter()]
-        [switch]$DryRun
+        [Parameter(Mandatory)]
+        [string]$WorkspaceId,
+        
+        [Parameter(Mandatory)]
+        [string]$TableName,
+
+        [Parameter(Mandatory)]
+        [hashtable[]]$Values
+
     )
 
-    $functionName = $Tab.Function
-    $paramNames   = $Tab.Params
 
-    if ($Tab.PerCompany -eq $true) {
-        $data = @()
-        $current_idx = 0
-        foreach ($company in $AllCompanies) {
-            $current_idx++
-            Write-Progress -Activity "submitting $($Tab.TableName)..." `
-                -Status "Company $current_idx / $($AllCompanies.Count)" `
-                -PercentComplete (($current_idx / $AllCompanies.Count) * 100)
+    Write-Host "`n[+]Pushing : $TableName..." -ForegroundColor Cyan
+    Write-Host "Values:" ($Values | ConvertTo-Json -Depth 5)
 
-            $args = @()
-            foreach ($p in $paramNames) {
-                $args += (Get-Variable -Name $p -ValueOnly)
+    # Run tabulation function
+        # Deduplicate and clean nulls (flatten single-level only)
+        $safeData = @()
+
+        if ($Schema.perCompany) {
+        foreach ($company in $all_companies) {
+            $row = @{}
+
+            if ($Schema.columns -contains 'company_id') {
+                $row.company_id = $company.id
             }
 
-            $row = & $functionName -company $company @args
-            if ($row) { $data += $row }
+            foreach ($colName in $Schema.columns) {
+                $entry = $Values | Where-Object { $_.company_id -eq $company.id }
+                $val = if ($entry) { $entry[0][$colName] } else { 0 }
+                $row[$colName] = if ($null -ne $val) { $val } elseif ($val -is [string]) { "" } else { 0 }
+            }
+
+            $safeData += [pscustomobject]$row
+            Set-PrintAndLog "Tabulated row:`n$($row | ConvertTo-Json -Depth 10)" -Color Yellow
         }
     } else {
-        $args = @()
-        foreach ($p in $paramNames) {
-            $args += (Get-Variable -Name $p -ValueOnly)
+        $row = @{}
+        foreach ($colName in $Schema.columns) {
+            $val = if ($Values.Count -gt 0) { $Values[0][$colName] } else { 0 }
+            $row[$colName] = if ($null -ne $val) { $val } elseif ($val -is [string]) { "" } else { 0 }
         }
-
-        $data = @(& $functionName @args)
+        $safeData += [pscustomobject]$row
+        Set-PrintAndLog "Tabulated row:`n$($row | ConvertTo-Json -Depth 10)" -Color Yellow
     }
 
-    if ($DryRun) {
-        Write-Host "`n=== [$($Tab.TableName)] ==="
-        $data | Format-Table
-        Read-Host "Press Enter to continue"
-    } else {
-        if ($data.Count -eq 0) {
-            Write-Warning "Skipping $($Tab.TableName): No data returned."
-            return
+        foreach ($k in $row.Keys) {
+            $val = $row[$k]
+            if ($null -eq $val -or ($val -is [string] -and $val -eq '')) {
+                Set-PrintAndLog "WARNING: Column [$k] is null or empty." -Color DarkYellow
+            }
         }
-        Push-DataToTable -TableName $Tab.TableName -Data $data -Token $AccessToken -DatasetId $DatasetId
+    # Compose parameters
+    $Params = @{
+        workspaceId = $workspaceId
+        datasetId = $DatasetId
+        TableName = $TableName
+        Token     = $Token
+        rows      = $safeData
     }
+    # Push to Power BI (or your target)
+    Push-DataToTable @Params
 }
