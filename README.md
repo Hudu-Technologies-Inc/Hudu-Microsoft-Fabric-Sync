@@ -41,3 +41,18 @@ Tables that are 'per-company' are calculated per-company and submitted 1-row-per
 Per-Company measurements have an additional column (company id) injected into them, so no need to differentiate in your schema def
 
 Tables that are not 'per-company' are calculated on their own.
+
+
+# Automating Hudu MSFabric Metrics with Task Scheduler
+<img width="3050" height="1178" alt="image" src="https://github.com/user-attachments/assets/9a59a519-7133-45c1-9c29-a48d61593908" />
+
+<img width="2090" height="1420" alt="image" src="https://github.com/user-attachments/assets/6f39305e-7fbe-4899-aef9-611206e50f0b" />
+
+
+<img width="1682" height="1406" alt="image" src="https://github.com/user-attachments/assets/9e76eeea-976d-4b45-9180-9b61528117c2" />
+
+
+<img width="1678" height="1226" alt="image" src="https://github.com/user-attachments/assets/3a26e4ca-b4fe-4245-b60a-aa732dd885c9" />
+
+
+<img width="1630" height="814" alt="image" src="https://github.com/user-attachments/assets/2fb84a4c-f0b0-4af5-b68c-8e3b58ed193f" />
