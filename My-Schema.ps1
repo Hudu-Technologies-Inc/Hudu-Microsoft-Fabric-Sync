@@ -140,8 +140,8 @@ $HuduSchema = @{
             dataType = 'Int64'
             Filter = {
                 param ($pw)
-                $threshold = (Get-Date).AddMonths(-6)
-                [pscustomobject]@{ old_passwords = ($pw | Where-Object { [datetime]$_.created_at -lt $threshold }).Count }
+                $age_threshold = (Get-Date).AddMonths(-6)
+                [pscustomobject]@{ old_passwords = ($pw | Where-Object { [datetime]$_.created_at -lt $age_threshold }).Count }
             }
         },
         @{
