@@ -1,5 +1,12 @@
 # Unified schema config file for Hudu → Power BI/Fabric
-# Drop this into your project and source it with `. .\MySchema.ps1`
+$UseAzureKeyStore=$false
+$AzVault_Name = "your-vaultname"
+$HuduApiKeySecretName = "your-secretname"
+$clientIdSecretName = "clientid-secretname"
+$tenantIdSecretName = "tenantid-secretname"
+$HuduBaseUrl= "yoururl.huducloud.com"
+$DataSetName = "MyDataSetName"
+$WorkspaceName = "MyWorkspaceName"
 
 $HuduSchema = @{
     Fetch = @(

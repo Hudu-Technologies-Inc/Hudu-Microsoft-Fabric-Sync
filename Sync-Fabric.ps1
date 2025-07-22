@@ -1,22 +1,26 @@
 param (
-    [string]$schemaFile
+    [string]$schemaFile,
+    [bool]$dryRun = $false
 )
 
 $workdir = $PSScriptRoot
-$schemaFile = $schemaFile ?? (Join-Path $workdir "My-Schema.ps1")
+$defaultSchemaPath = Join-Path $workdir "My-Schema.ps1"
 
-$dryRun = $false # dry run doesnt add your data to powerBI but spits it out to file, which is handy for designing your schema
+if (-not $schemaFile -or -not (Test-Path $schemaFile)) {
+    if (Test-Path $defaultSchemaPath) {
+        $schemaFile = $defaultSchemaPath
+    } else {
+        Write-Error "Schema file was not provided and default schema file '$defaultSchemaPath' not found."
+        exit 1
+    }
+}
 
-$HuduBaseUrl= $HuduBaseURL ?? $(read-host "enter hudu URL")
-$DataSetName = $DataSetName ?? $(read-host "What name for powerBI/fabric dataset would you like")
-$WorkspaceName = $WorkspaceName ?? $(read-host "What name for powerBI/fabric workspace would you like")
+Write-Host "Fabric Sync started with schema file: $schemaFile". $schemaFile
+$dryRun = $dryRun ?? $false
+
 
 # If you are using AZ keystore (reccomended, fill out) the line that starts with AZVault_name
-$UseAzureKeyStore= $UseAzureKeyStore ?? $false
-$AzVault_Name = "your-vaultname"
-$HuduApiKeySecretName = "your-secretname"
-$clientIdSecretName = "clientid-secretname"
-$tenantIdSecretName = "tenantid-secretname"
+
 
 foreach ($file in $(Get-ChildItem -Path ".\helpers" -Filter "*.ps1" -File | Sort-Object Name)) {
     Write-Host "Importing: $($file.Name)" -ForegroundColor DarkBlue
@@ -34,26 +38,22 @@ if ($UseAzureKeyStore) {
     $clientId = if ([bool]$([string]::IsNullOrWhiteSpace($clientId))) {$null} else {$clientId}
     $tenantId = if ($null -eq $clientId) {$null} else {$(Read-Host "Enter TenantId for your Microsoft Account")}
 }
-# your schema definitions
 Get-EnsuredModule -name "MSAL.PS"
-
 #### Part 1- Init and load modules + user's schema definitions
 ##
 #
 Set-Content -Path $logFile -Value "Starting Fabric Sync at $(get-date). Running self-checks and setting fallback values." 
-Set-LoggedStartupItems
 $DataSetName=$DataSetName ?? "data-$(Get-SafeTitle -Name $HuduBaseUrl)"
 $WorkspaceName=$WorkspaceName ?? "ws-$(Get-SafeTitle -Name $HuduBaseUrl)"
+Set-LoggedStartupItems
 
-Set-PrintAndLog -message "you chose name of $DataSetName and workspace name $WorkspaceName... Importing My schema from $schemaFile..." -Color Green
-. $schemaFile
 
 $registration = EnsureRegistration -ClientId $clientId -TenantId $tenantId -delegatedPermissions $delegatedPermissions -ApplicationPermissions $ApplicationPermissions
 $clientId = $clientId ?? $registration.clientId
 $tenantId = $tenantId ?? $registration.tenantId
 clear-host
-$tokenResult=$tokenResult ?? $null
-if ($null -eq $tokenResult) {Start-Process "https://microsoft.com/devicelogin"} 
+
+Start-Process "https://microsoft.com/devicelogin"
 $tokenResult = $tokenResult ?? $(Get-MsalToken -ClientId $clientId -TenantId $tenantId -DeviceCode -Scopes $scope)
 $accessToken = $accessToken ?? $tokenResult.AccessToken
 Write-Host "$(Decode-JwtTokenPayload -Token $accessToken)"
