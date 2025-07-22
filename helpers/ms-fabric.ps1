@@ -136,30 +136,41 @@ function Invoke-HuduTabulation {
     Write-Host "`n[+] Tabulating: $TableName..." -ForegroundColor Cyan
 
     # Run tabulation function
-    $row = @{}
-    foreach ($col in $Schema.columns) {
-        $val = Get-Variable -Name $col.name -ValueOnly -ErrorAction SilentlyContinue
-        if ($val -is [hashtable] -or $val -is [pscustomobject]) {
-            $val = $val.$($col.name)
-        }
+        # Deduplicate and clean nulls (flatten single-level only)
+        $safeData = @()
 
-        $row[$col.name] = $val
-        Set-PrintAndLog "Tabulated row:`n$($safeData | ConvertTo-Json -Depth 10)" -Color Yellow
+        if ($Schema.perCompany) {
+            foreach ($company in $all_companies) {
+                $row = @{ company_id = $company.id }
 
-    }
-    $data = @([pscustomobject]$row)
+                foreach ($col in $Schema.columns) {
+                    $val = Get-Variable -Name $col.name -ValueOnly -ErrorAction SilentlyContinue
 
-    # Deduplicate and clean nulls (flatten single-level only)
-    $safeData = @()
-    foreach ($entry in $data) {
-        $obj = @{}
-        foreach ($k in $entry.PSObject.Properties.Name) {
-            if ($entry.$k -ne $null) {
-                $obj[$k] = $entry.$k
+                    if ($val -is [hashtable] -or $val -is [pscustomobject]) {
+                        $row[$col.name] = $val.$($col.name)
+                    } elseif ($val -is [array]) {
+                        # This would allow per-company slicing later, if needed
+                        $row[$col.name] = ($val | Where-Object { $_.company_id -eq $company.id }).Count
+                    } else {
+                        $row[$col.name] = $val
+                    }
+                }
+
+                $safeData += [pscustomobject]$row
+                Set-PrintAndLog "Tabulated row:`n$($row | ConvertTo-Json -Depth 10)" -Color Yellow
             }
+        } else {
+            $row = @{}
+            foreach ($col in $Schema.columns) {
+                $val = Get-Variable -Name $col.name -ValueOnly -ErrorAction SilentlyContinue
+                if ($val -is [hashtable] -or $val -is [pscustomobject]) {
+                    $val = $val.$($col.name)
+                }
+                $row[$col.name] = $val
+            }
+            $safeData += [pscustomobject]$row
+            Set-PrintAndLog "Tabulated row:`n$($row | ConvertTo-Json -Depth 10)" -Color Yellow
         }
-        $safeData += [pscustomobject]$obj
-    }
 
     # Compose parameters
     $Params = @{

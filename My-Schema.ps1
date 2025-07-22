@@ -10,138 +10,159 @@ $WorkspaceName = "myworkspace"
 
 $HuduSchema = @{
     WorkspaceName = "myworkspace"
-    DatasetName   = "mydataset"    
+    DatasetName   = "mydataset"
     Fetch = @(
-    @{  Name = 'all_companies'
-        Command = { Get-HuduCompanies }
-        dataType = 'Int64'},
-    @{  Name = 'all_assets'
-        Command = { Get-HuduAssets }
-        dataType = 'Int64'},
-    @{  Name = 'all_articles'
-        Command = { Get-HuduArticles }
-        dataType = 'Int64'},
-    @{  Name = 'all_assetlayouts'
-        Command = { Get-HuduAssetLayouts }
-        dataType = 'Int64'},
-    @{  Name = 'all_processes';
-        Command = { Get-HuduProcesses }
-        dataType = 'Int64'},
-    @{  Name = 'all_websites'
-        Command = { Get-HuduWebsites }
-        dataType = 'Int64'
-    },
-    @{ Name = 'all_uploads'
-        Command = { Get-HuduUploads }
-        dataType = 'Int64'},
-    @{ Name = 'num_users'
-        Command = { Get-HuduUsers }
-        Filter = {
-            param ($items)
-            [pscustomobject]@{ num_users = $items.Count }
-        }},
-    @{ Name = 'num_admins'
-        Command = { Get-HuduUsers }
-        Filter = {
-            param ($items)
-            $count = ($items | Where-Object { $_.security_level -eq 'admin' }).Count
-            [pscustomobject]@{ num_admins = $count }
-        }},
-    @{ Name = 'num_superadmins'
-        Command = { Get-HuduUsers }
-        Filter = {
-            param ($items)
-            $count = ($items | Where-Object { $_.security_level -eq 'super_admin' }).Count
-            [pscustomobject]@{ num_superadmins = $count }
-        }},
-    @{ Name = 'top_author_email'
-        Command = { Get-HuduUsers }
-        Filter = {
-            param ($items)
-            $top = $items | Sort-Object { [int]$_.score_all_time } -Descending | Select-Object -First 1
-            [pscustomobject]@{ top_author_email = $top.email }
-        }},
-    @{ Name = 'public_articles'
-        Command = { Get-HuduArticles }
-        Filter = {
-            param ($items)
-            $count = ($items | Where-Object { $_.sharing_enabled -eq $true }).Count
-            [pscustomobject]@{ public_articles = $count }
-        }},
-    @{ Name = 'old_passwords'
-        Command = { Get-HuduPasswords }
-        Filter = {
-            param ($items)
-            $threshold = (Get-Date).AddMonths(-6)
-            $count = ($items | Where-Object { [datetime]$_.created_at -lt $threshold }).Count
-            [pscustomobject]@{ old_passwords = $count }
-        }},
-    @{ Name = 'weak_passwords'
-        Command = { Get-HuduPasswords }
-        Filter = {
-            param ($items)
-            $count = ($items | Where-Object { "$($_.password)".Length -le 6 }).Count
-            [pscustomobject]@{ weak_passwords = $count }
-        }},
-    @{ Name = 'archived_assets'
-        Command = { Get-HuduAssets }
-        Filter = {
-            param ($items)
-            $count = ($items | Where-Object { $true -eq [bool]$_.Archived }).Count
-            [pscustomobject]@{ archived_assets = $count }
-        }},
-    @{ Name = 'finished_articles'
-        Command = { Get-HuduArticles }
-        Filter = {
-            param ($items)
-            $count = ($items | Where-Object { $_.Draft -eq $false }).Count
-            [pscustomobject]@{ finished_articles = $count }
-        }},
-    @{ Name = 'draft_articles'
-        Command = { Get-HuduArticles }
-        Filter = {
-            param ($items)
-            $count = ($items | Where-Object { $_.Draft -eq $true }).Count
-            [pscustomobject]@{ draft_articles = $count }
-        }},
-    @{ Name = 'short_articles'
-        Command = { Get-HuduArticles }
-        Filter = {
-            param ($items)
-            $count = ($items | Where-Object { "$($_.content)".Length -lt 250 }).Count
-            [pscustomobject]@{ short_articles = $count }
-        }})
-Tables = @(
         @{
-            name        = "PerCompanyInfo"
-            perCompany  = $true
-            columns     = @(
-                "all_assets",
-                "all_articles",
-                "all_processes",
-                "all_websites",
-                "all_expirations",
-                "all_folders",
-                "all_magic_dashes",
-                "top_author_email",
-                "public_articles",
-                "old_passwords",
-                "weak_passwords",
-                "archived_assets",
-                "finished_articles",
-                "draft_articles",
-                "short_articles"
-            )
+            Name    = 'all_companies'
+            Command = { Get-HuduCompanies }
+            dataType = 'Int64'
+            Filter = {
+                param ($items)
+                [pscustomobject]@{ all_companies = $items.Count }
+            }
+        },
+        @{
+            Name    = 'all_assets'
+            Command = { Get-HuduAssets }
+            dataType = 'Int64'
+            Filter = {
+                param ($items)
+                [pscustomobject]@{ all_assets = $items.Count }
+            }
+        },
+        @{
+            Name    = 'all_articles'
+            Command = { Get-HuduArticles }
+            dataType = 'Int64'
+            Filter = {
+                param ($items)
+                [pscustomobject]@{ all_articles = $items.Count }
+            }
+        },
+        @{
+            Name = 'all_assetlayouts'
+            Command = { Get-HuduAssetLayouts }
+            dataType = 'Int64'
+            Filter = {
+                param ($items)
+                [pscustomobject]@{ all_assetlayouts = $items.Count }
+            }
+        },
+        @{
+            Name = 'all_processes'
+            Command = { Get-HuduProcesses }
+            dataType = 'Int64'
+            Filter = {
+                param ($items)
+                [pscustomobject]@{ all_processes = $items.Count }
+            }
+        },
+        @{
+            Name = 'all_websites'
+            Command = { Get-HuduWebsites }
+            dataType = 'Int64'
+            Filter = {
+                param ($items)
+                [pscustomobject]@{ all_websites = $items.Count }
+            }
+        },
+        @{
+            Name = 'all_uploads'
+            Command = { Get-HuduUploads }
+            dataType = 'Int64'
+            Filter = {
+                param ($items)
+                [pscustomobject]@{ all_uploads = $items.Count }
+            }
+        },
+        @{
+            Name = 'num_users'
+            Command = { Get-HuduUsers }
+            Filter = {
+                param ($items)
+                [pscustomobject]@{ num_users = $items.Count }
+            }
+        },
+        @{
+            Name = 'num_admins'
+            Command = { Get-HuduUsers }
+            Filter = {
+                param ($users)
+                [pscustomobject]@{ num_admins = ($users | Where-Object { $_.security_level -eq 'admin' }).Count }
+            }
+        },
+        @{
+            Name = 'num_superadmins'
+            Command = { Get-HuduUsers }
+            Filter = {
+                param ($users)
+                [pscustomobject]@{ num_superadmins = ($users | Where-Object { $_.security_level -eq 'super_admin' }).Count }
+            }
+        },
+        @{
+            Name = 'top_author_email'
+            Command = { Get-HuduUsers }
+            Filter = {
+                param ($users)
+                [pscustomobject]@{ top_author_email = ($users | Sort-Object { [int]$_.score_all_time } -Descending | Select-Object -First 1).email }
+            }
+        },
+        @{
+            Name = 'public_articles'
+            Command = { Get-HuduArticles }
+            Filter = {
+                param ($articles)
+                [pscustomobject]@{ public_articles = ($articles | Where-Object { $_.sharing_enabled -eq $true }).Count }
+            }
+        },
+        @{
+            Name = 'old_passwords'
+            Command = { Get-HuduPasswords }
+            Filter = {
+                param ($pw)
+                $threshold = (Get-Date).AddMonths(-6)
+                [pscustomobject]@{ old_passwords = ($pw | Where-Object { [datetime]$_.created_at -lt $threshold }).Count }
+            }
+        },
+        @{
+            Name = 'weak_passwords'
+            Command = { Get-HuduPasswords }
+            Filter = {
+                param ($pw)
+                [pscustomobject]@{ weak_passwords = ($pw | Where-Object { "$($_.password)".Length -le 6 }).Count }
+            }
+        },
+        @{
+            Name = 'archived_assets'
+            Command = { Get-HuduAssets }
+            Filter = {
+                param ($assets)
+                [pscustomobject]@{ archived_assets = ($assets | Where-Object { $true -eq [bool]$_.Archived }).Count }
+            }
+        },
+        @{
+            Name = 'finished_articles'
+            Command = { Get-HuduArticles }
+            Filter = {
+                param ($articles)
+                [pscustomobject]@{ finished_articles = ($articles | Where-Object { $_.Draft -eq $false }).Count }
+            }
+        },
+        @{
+            Name = 'draft_articles'
+            Command = { Get-HuduArticles }
+            Filter = {
+                param ($articles)
+                [pscustomobject]@{ draft_articles = ($articles | Where-Object { $_.Draft -eq $true }).Count }
+            }
+        },
+        @{
+            Name = 'short_articles'
+            Command = { Get-HuduArticles }
+            Filter = {
+                param ($articles)
+                [pscustomobject]@{ short_articles = ($articles | Where-Object { "$($_.content)".Length -lt 250 }).Count }
+            }
         }
-        @{
-            name        = "UserInfo"
-            perCompany  = $false
-            columns     = @(
-                "num_users",
-                "num_admins",
-                "num_superadmins"
-        )
-    }
     )
 }
-
