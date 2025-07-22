@@ -26,7 +26,7 @@ if ($UseAzureKeyStore) {
     $clientId   = Get-AzKeyVaultSecret -VaultName $AzVault_Name -Name $tenantIdSecretName -AsPlainText
     $tenantId = Get-AzKeyVaultSecret -VaultName $AzVault_Name -Name $clientIdSecretName -AsPlainText
     $clientSecret = ConvertTo-SecureString -String "$(Get-AzKeyVaultSecret -VaultName $AzVault_Name -Name $clientSecretName -AsPlainText)" -AsPlainText -Force
-    $clientSecret = if ([bool]$([string]::IsNullOrWhiteSpace($clientSecret))) {$null} else {$clientSecret}
+    $clientSecret = if ([bool]$([string]::IsNullOrWhiteSpace("$clientSecret"))) {$null} else {$clientSecret}
 } else {
     $HuduApiKey = $HuduApiKey ?? $(Read-Host "Enter API key")
     $clientId = $clientId ?? $(Read-Host "Enter AppId (ClientId) for your PowerBI App Registration [or leave empty to create an app registration later]")
@@ -38,7 +38,7 @@ if ($UseAzureKeyStore) {
 #
 # perform startup checks and kick off registration if client or tenant vars are blank/null
 Add-Content -Path $logFile -Value "Starting Fabric Sync at $(Get-Date). Running self-checks and setting fallback values."
-$AuthStrategyMessage = Get-AuthStrategyMessage -clientIdPresent [bool]$([string]::IsNullOrWhiteSpace($clientId)) -tenantIdPresent [bool]$([string]::IsNullOrWhiteSpace($tenantId)) -cleintSecretPresent [bool]$([string]::IsNullOrWhiteSpace($clientSecret))
+$AuthStrategyMessage = Get-AuthStrategyMessage  -clientIdPresent (-not [string]::IsNullOrWhiteSpace($clientId)) -tenantIdPresent (-not [string]::IsNullOrWhiteSpace($tenantId)) -clientSecretPresent (-not [string]::IsNullOrWhiteSpace($clientSecret))
 Set-PrintAndLog -message "$AuthStrategyMessage" -color Magenta
 Get-EnsuredModule -name "MSAL.PS"
 Set-LoggedStartupItems
