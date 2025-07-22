@@ -112,6 +112,8 @@ foreach ($f in $HuduSchema.Fetch) {
         $row[$prop.Name] = $prop.Value
         $Results[$prop.Name] = $prop.Value
     }
+    $row.__original = $raw
+
 
     if (-not $AllResults.ContainsKey($name)) {
         $AllResults[$name] = @()
@@ -134,20 +136,49 @@ foreach ($table in $HuduSchema.Tables) {
 
     # enumerate rows in the expected format based on whether table is per-company or not.
     if ($isPerCompany) {
-        foreach ($company in $allCompanies) {
-            $row = @{ company_id = $company.id }
-            foreach ($col in $table.columns) {
+    foreach ($company in $allCompanies) {
+        $row = @{ company_id = $company.id }
+
+        foreach ($col in $table.columns) {
                 $entries = $AllResults[$col]
                 if (-not $entries) { continue }
-                # $row[$col] = ($entries | Where-Object { $_.company_id -eq $company.id }).$col ?? 0
-                $row[$col] = (
-                    $entries | Where-Object {
-                        $u = Unwrap-SinglePropertyWrapper -InputObject $_
-                        $u.company_id -eq $company.id
+
+                # Try to match company directly on filtered result
+                $matched = $entries | Where-Object {
+                    $u = Unwrap-SinglePropertyWrapper -InputObject $_
+                    $u.company_id -eq $company.id
+                }
+
+                # If that fails and there's __original, re-filter that per company
+                if (-not $matched -and $entries[0].PSObject.Properties.Match('__original')) {
+                    # Grab the fetch definition (from $HuduSchema.Fetch) to access its Filter
+                    $fetchDef = $HuduSchema.Fetch | Where-Object { $_.Name -eq $col }
+
+                    if ($null -ne $fetchDef.Filter) {
+                        $perCompanyOriginals = @($entries | Select-Object -ExpandProperty __original) | Where-Object {
+                            $_.company_id -eq $company.id
+                        }
+
+                        # Reapply the original filter on this subset
+                        $reFiltered = & $fetchDef.Filter $perCompanyOriginals
+
+                        # If it returned a PSCustomObject, grab the value under the expected key
+                        if ($reFiltered -is [pscustomobject]) {
+                            $row[$col] = $reFiltered.$col ?? 0
+                        } else {
+                            $row[$col] = 0
+                        }
+                    } else {
+                        $row[$col] = 0
                     }
-                ).$col ?? 0
+                }
+                else {
+                    # Matched normally — use the value
+                    $row[$col] = @($matched).Count
+                }
             }
-            $finalRows += [pscustomobject]$row
+
+        $finalRows += [pscustomobject]$row
         }
     } else {
         $row = @{}
