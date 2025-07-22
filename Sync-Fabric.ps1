@@ -1,5 +1,9 @@
+param (
+    [string]$schemaFile
+)
+
 $workdir = $PSScriptRoot
-## Config
+$schemaFile = $schemaFile ?? (Join-Path $workdir "My-Schema.ps1")
 
 $dryRun = $false # dry run doesnt add your data to powerBI but spits it out to file, which is handy for designing your schema
 
@@ -31,7 +35,6 @@ if ($UseAzureKeyStore) {
     $tenantId = if ($null -eq $clientId) {$null} else {$(Read-Host "Enter TenantId for your Microsoft Account")}
 }
 # your schema definitions
-$schemaFile = $(join-path $workdir "My-Schema.ps1")
 Get-EnsuredModule -name "MSAL.PS"
 
 #### Part 1- Init and load modules + user's schema definitions
@@ -70,14 +73,14 @@ set-printandlog -message "Using Dataset $($Dataset | ConvertTo-Json -Depth 10)" 
 ##
 #
 $fetchIdx=0
-foreach ($f in $HuduFetchMap) {
+foreach ($item in $HuduSchema.Fetch) {
     $fetchIdx=$fetchIdx +1
     $completionPercentage=Get-PercentDone -Current $fetchIdx -Total $HuduFetchMap.count
-    $title = [regex]::Replace(($f.Name -replace '^all_', '' -replace '_', ' '), '\b(\w)', { param($m) $m.Groups[1].Value.ToUpper() })
-    Write-Progress -Activity "Fetching $title... ($fetchIdx / $($HuduFetchMap.count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
-    Set-Variable -Name $f.Name -Value ($result = & $f.Command); Set-PrintAndLog -message "$($f.Name): $($result?.Count ?? 'null')" -Color Cyan
+    $result = & $item.Command
+    Set-Variable -Name $item.Name -Value $result
+    Set-PrintAndLog "$($item.Name): $($result?.Count ?? 'null')" -Color Cyan
 }
-# transform your data before calculation if desired
+# 3.5- transform your data before calculation if desired
 if ($all_expirations) {
     $all_expirations = $all_expirations | ForEach-Object {
         $_ | Add-Member -MemberType NoteProperty -Name ParsedExpirationDate `
@@ -88,14 +91,14 @@ if ($all_expirations) {
 #### Part 4- Dynamically Submit Data based on how you configured your schema nd tabulation map
 ##
 #
-foreach ($tab in $HuduTabulationMap) {
+foreach ($tab in $HuduSchema.Tables) {
     try {
-        Set-PrintAndLog -message "Invoking Fabric Tabulation Task $($Tab.Function)" -Color Green
         Invoke-TabulationTask -Tab $tab -AllCompanies $all_companies -AccessToken $accessToken -DatasetId $DataSet -DryRun:$DryRun
     } catch {
-        Write-ErrorObjectsToFile -name; -ErrorObject @(
-            Func = $Tab.Function
-            Params = $tab.Params
-            Error = $_) -name "Tabulation-Err"
-       }
+        Write-ErrorObjectsToFile -Name "Tabulation-Err" -ErrorObject @{
+            Func   = $tab.function
+            Params = $tab.depends
+            Error  = $_
+        }
+    }
 }
