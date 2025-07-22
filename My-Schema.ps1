@@ -20,6 +20,7 @@ $HuduBaseUrl= "yoururl.huducloud.com"
 
 # What will you call your new Fabric workspace?
 $WorkspaceName = "myworkspace"
+$age_threshold = (Get-Date).AddMonths(-6)
 
 
 $HuduSchema = @{
@@ -141,7 +142,7 @@ $HuduSchema = @{
             Filter = {
                 param ($pw)
                 $age_threshold = (Get-Date).AddMonths(-6)
-                [pscustomobject]@{ old_passwords = ($pw | Where-Object { [datetime]$_.created_at -lt $age_threshold }).Count }
+                [pscustomobject]@{ old_passwords = ($pw | Where-Object { [datetime]$_.updated_at -lt $age_threshold }).Count }
             }
         },
         @{
