@@ -42,6 +42,7 @@ $tenantId = $tenantId ?? $registration.tenantId
 if ($null -ne $clientSecret) {
     Set-PrintAndLog -message "client secret was retrieved. Assuming application auth." -Color Green
     $tokenResult = Get-MsalToken -ClientId $clientId -TenantId $tenantId -ClientSecret $clientSecret -Scopes $scope
+    $accessToken = $accessToken ?? $tokenResult.AccessToken
 } else {
     Set-PrintAndLog -message "No client secret was retrieved. Assuming Device Login." -Color Green
     Start-Process "https://microsoft.com/devicelogin"
@@ -50,7 +51,7 @@ if ($null -ne $clientSecret) {
 }
 
 
-# Write-Host "$(Decode-JwtTokenPayload -Token $accessToken)"
+Write-Host "$(Decode-JwtTokenPayload -Token $accessToken)"
 
 #### Part 2- Find or Create Workspace and Dataset!
 ##
