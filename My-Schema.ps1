@@ -3,12 +3,15 @@ $UseAzureKeyStore=$true
 $AzVault_Name = "your-vaultname"
 $HuduApiKeySecretName = "your-secretname"
 $clientIdSecretName = "clientid-secretname"
+$clientSecretName = "client-secretname"
 $tenantIdSecretName = "tenantid-secretname"
 $HuduBaseUrl= "yoururl.huducloud.com"
 $WorkspaceName = "myworkspace"
 
 $HuduSchema = @{
-Fetch = @(
+    WorkspaceName = "myworkspace"
+    DatasetName   = "mydataset"    
+    Fetch = @(
     @{  Name = 'all_companies'
         Command = { Get-HuduCompanies }
         dataType = 'Int64'},

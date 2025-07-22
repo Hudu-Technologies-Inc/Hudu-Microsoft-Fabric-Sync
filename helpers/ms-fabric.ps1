@@ -3,6 +3,34 @@ $ApplicationPermissions = @("Tenant.Read.All","Dataset.ReadWrite.All","Workspace
 $scope= "https://analysis.windows.net/powerbi/api/.default"
 # fallback values for improper or null workspace/dataset name
 
+function Convert-HuduSchemaToDatasetJson {
+    param (
+        [Parameter(Mandatory)]
+        [hashtable]$Schema
+    )
+    $FetchMap = @{}
+    foreach ($f in $Schema.Fetch) {
+        $FetchMap[$f.Name] = $f
+    }
+
+    $DatasetSchema = foreach ($table in $Schema.Tables) {
+        $columns = foreach ($colName in $table.columns) {
+            $fetch = $FetchMap[$colName]
+            [pscustomobject]@{
+                name     = $colName
+                dataType = $fetch.dataType ?? "String"
+            }
+        }
+
+        [pscustomobject]@{
+            name    = $table.name
+            columns = $columns
+        }
+    }
+
+    return $DatasetSchema | ConvertTo-Json -Depth 10
+}
+
 function Set-Workspace {
     param (
         [string]$name,
