@@ -10,8 +10,8 @@ $WorkspaceName = "myworkspace"
 
 
 $HuduSchema = @{
-    WorkspaceName = "myworkspaceasdasdffasd"
-    DatasetName   = "mydatasetasdfaasdfs"
+    WorkspaceName = "MyWorkspaceName"
+    DatasetName   = "MyDatasetName"
     Fetch = @(
         @{
             Name    = 'all_companies'
@@ -179,14 +179,13 @@ $HuduSchema = @{
     )
     Tables = @(
         @{
-            name        = "mydatasetasdfaasdfs"
+            name        = "Mytablename1"
             perCompany  = $true
             columns     = @(
                 "all_assets",
                 "all_articles",
                 "all_processes",
                 "all_websites",
-                "all_expirations",
                 "all_magic_dashes",
                 "top_author_email",
                 "public_articles",
@@ -199,5 +198,16 @@ $HuduSchema = @{
             )
             
         }
+        @{
+            name        = "MyTableName2"
+            perCompany  = $false
+            columns     = @(
+                "num_users",
+                "num_admins",
+                "num_superadmins",
+                "top_author_email"
+            )
+            
+        }        
     )
 }
