@@ -244,14 +244,22 @@ function EnsureRegistration {
                 Write-Warning "App registration failed. Try again."
                 continue
             }
-
-            Set-PrintAndLog -message "Now, make sure Device Code Flow is enabled in your app registration." -Color Cyan
-            Write-Host "`nTo do this:" -ForegroundColor Cyan
-            Write-Host "1. Open your app registration in Azure Portal $($newAppRegResult.RegistrationUrl)" -ForegroundColor Cyan
-            Write-Host "2. Go to Authentication > Advanced Settings" -ForegroundColor Cyan
-            Write-Host "3. Under 'Allow public client flows', enable 'Allow device code flow'" -ForegroundColor Cyan
-            Write-Host "`nOpening the Device Code Login URL to test your registration..."  -ForegroundColor Cyan
+            $PowerBIConfigUrl="https://app.powerbi.com/admin-portal/tenantSettings?language=en-US&experience=power-bi"
+            Set-PrintAndLog -message "For Single-Use: make sure Device Code Flow is enabled in your app registration." -Color Cyan
+            Write-Host "`nTo do this:" -ForegroundColor DarkCyan
+            Write-Host "1. Open your app registration in Azure Portal $($newAppRegResult.RegistrationUrl)" -ForegroundColor DarkCyan
+            Write-Host "2. Go to Authentication > Advanced Settings" -ForegroundColor DarkCyan
+            Write-Host "3. Under 'Allow public client flows', enable 'Allow device code flow'" -ForegroundColor DarkCyan
+            Write-Host ""
+            Set-PrintAndLog -message "For Recurring Noninteractive use (reccomended): Create an Client Secret (App Secret) in your registration and allow for use in PowerBI Admin Dashboard" -Color Cyan
+            Write-Host "1. Open your app registration in Azure Portal $($newAppRegResult.RegistrationUrl)" -ForegroundColor DarkCyan
+            Write-Host "2. Under Certificates and Secrets, generate or regenerate App Secret" -ForegroundColor DarkCyan
+            Write-Host "3. In PowerBI Admin Dashboard ($PowerBIConfigUrl) check to allow service principals to A: Allow service principals to create and manage workspaces and B: Allow service principals to create and manage workspaces" -ForegroundColor DarkCyan
+            Write-Host "`nOpening both URLs for your convenience"  -ForegroundColor DarkCyan
+            
             Start-Process $($newAppRegResult.RegistrationUrl)
+            Start-Process $($PowerBIConfigUrl)
+            
             Read-Host "Press Enter when Finished"
         } else {
             $tenantId = $tenantId ?? $(Read-Host "Enter your Microsoft Tenant ID")

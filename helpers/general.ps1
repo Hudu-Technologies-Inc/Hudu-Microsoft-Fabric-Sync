@@ -6,6 +6,20 @@ function Get-EnsuredModule {
     Import-Module $Name -Force
 }
 
+function Unset-Vars {
+    param (
+        [string]$varname,
+        [string[]]$scopes = @('Local', 'Script', 'Global', 'Private')
+    )
+
+    foreach ($scope in $scopes) {
+        if (Get-Variable -Name $varname -Scope $scope -ErrorAction SilentlyContinue) {
+            Remove-Variable -Name $varname -Scope $scope -Force -ErrorAction SilentlyContinue
+            Write-Host "Unset `$${varname} from scope: $scope"
+        }
+    }
+}
+
 function Prompt-IfMissing {
     param ($varRef, $prompt)
     if (-not $varRef.Value) { $varRef.Value = Read-Host $prompt }

@@ -3,6 +3,22 @@ $ApplicationPermissions = @("Tenant.Read.All","Dataset.ReadWrite.All","Workspace
 $scope= "https://analysis.windows.net/powerbi/api/.default"
 # fallback values for improper or null workspace/dataset name
 
+function Get-AuthStrategyMessage {
+    param (
+        [bool]$clientIdPresent,
+        [bool]$tenantIdPresent,
+        [bool]$clientSecretPresent
+    )
+    if (-not $clientIdPresent -or -not $tenantIdPresent) {
+        return "Missing Client Id or Tenant Id, we'll start up the registration helper script for you. (tenant id present: $tenantIdPresent; client id preseent $clientIdPresent)"
+    } elseif (-not $clientSecretPresent) {
+        return "Client Id and Tenant Id present, but no ClientSecret. We'll assume that you want to use -deviceCode interactive authentication. (good for testing, not good for backgrounded, noninteractive use)"
+    } else {
+        return "Client Id and Tenant Id present, ClientSecret Present. Assuming fully noninteractive use! Be sure you have Azure Keystore set up!!."
+    }
+}
+
+
 function Convert-HuduSchemaToDataset {
     param (
         [Parameter(Mandatory)]
@@ -111,7 +127,7 @@ function Push-DataToTable {
     $result = Invoke-RestMethod -Uri $uri -Method Post -Headers @{ Authorization = "Bearer $token" } `
         -ContentType "application/json" -Body $payload
 
-    Set-PrintAndLog -message "Push result: $($result | Out-String)"
+    Set-PrintAndLog -message "Push result: $($result | ConvertFrom-Json | Out-String)"
 }
 
 function Invoke-HuduTabulation {
@@ -147,10 +163,12 @@ function Invoke-HuduTabulation {
         if ($Schema.perCompany) {
         foreach ($company in $all_companies) {
             $row = @{}
-
             if ($Schema.columns -contains 'company_id') {
                 $row.company_id = $company.id
             }
+            if ($Schema.columns -contains 'company_name') {
+                $row.company_name = $company.name
+            }            
 
             foreach ($colName in $Schema.columns) {
                 $entry = $Values | Where-Object { $_.company_id -eq $company.id }

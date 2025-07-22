@@ -1,11 +1,24 @@
-# Unified schema config file for Hudu → Power BI/Fabric
+####### Unified schema config file for Hudu → Power BI/Fabric
+# if you want the first-time app registration helper script to run, set these as blank or $null
+# otherwise these are 'less-sensitive', but it is best to get these from AZ key vault if possible.
+$clientId = ""
+$tenantId = ""
+
+
+# use Azure Key Vault for obtaining secrets? (highly reccomended)
 $UseAzureKeyStore=$true
+
+# AZ Vault and secrets config
 $AzVault_Name = "your-vaultname"
 $HuduApiKeySecretName = "your-secretname"
 $clientIdSecretName = "clientid-secretname"
 $clientSecretName = "client-secretname"
 $tenantIdSecretName = "tenantid-secretname"
+
+# Hudu URL Setup-
 $HuduBaseUrl= "yoururl.huducloud.com"
+
+# What will you call your new Fabric workspace?
 $WorkspaceName = "myworkspace"
 
 
