@@ -55,9 +55,12 @@ Write-Host "$(Decode-JwtTokenPayload -Token $accessToken)"
 
 #### Part 2- Find or Create Workspace and Dataset!
 ##
-$WorkspaceName = $HuduSchema.WorkspaceName
-$DataSetName   = $HuduSchema.DatasetName
-$DatasetSchemaJson = Convert-HuduSchemaToDatasetJson -Schema $HuduSchema
+$SchemaResult = Convert-HuduSchemaToDataset -HuduSchema $HuduSchema
+
+$WorkspaceName     = $SchemaResult.WorkspaceName
+$DatasetName       = $SchemaResult.DatasetName
+$DatasetSchema     = $SchemaResult.DatasetDefinition
+$DatasetSchemaJson = $SchemaResult.DatasetDefinition | ConvertTo-Json -Depth 10
 
 # Set Workspace
 $Workspace = Set-Workspace -name $WorkspaceName -token $accessToken
@@ -65,6 +68,7 @@ if (-not $Workspace) {Set-PrintAndLog -message "Couldn’t find or create worksp
 Set-PrintAndLog -message "Using Workspace $($Workspace | ConvertTo-Json -Depth 10)" -Color Green
 
 # Set Dataset
+Set-PrintAndLog "Final Dataset JSON: $DatasetSchemaJson" -Color Yellow
 $DataSet = Set-DataSet -name $DataSetName -schemaJson $DatasetSchemaJson -token $accessToken -workspaceId $Workspace.id
 if (-not $DataSet) {Set-PrintAndLog -message "Couldn’t find or create dataset $DataSetName. Review your settings and permissions." -Color Red; exit 1}
 Set-PrintAndLog -message "Using Dataset $($DataSet | ConvertTo-Json -Depth 10)" -Color Green
@@ -72,30 +76,38 @@ Set-PrintAndLog -message "Using Dataset $($DataSet | ConvertTo-Json -Depth 10)" 
 #### Part 3- Get useful source data and Tabulate it
 ##
 #
-$fetchIdx=0
+$fetchIdx = 0
 foreach ($f in $HuduSchema.Fetch) {
-    $fetchIdx=$fetchIdx +1
-    $completionPercentage=Get-PercentDone -Current $fetchIdx -Total $HuduSchema.Fetch.count
+    $fetchIdx++
+    $completionPercentage = Get-PercentDone -Current $fetchIdx -Total $HuduSchema.Fetch.Count
     $name = $f.Name
     Write-Host "Fetching: $name"
+
+    # Run the fetch command
     $result = & $f.Command
-    if ($f.Filter) {
-        $result = & $f.Filter.Invoke($result)
+
+    # If there's a filter, apply it
+    if ($f.ContainsKey("Filter") -and $null -ne $f.Filter) {
+        $result = & $f.Filter $result
     }
-    Set-Variable -Name $name -Value $result -Scope Global
+
+    # Store to global variable
+    Set-Variable -Name $name -Value $result
+
     Set-PrintAndLog "$name count: $($result?.Count ?? 'null')" -Color Cyan
-    Write-Progress -Activity "Fetching $title... ($fetchIdx / $($HuduSchema.Fetch.count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
+    Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
 }
 #### Part 4- Dynamically Submit Data based on how you configured your schema nd tabulation map
 ##
 #
-foreach ($tab in $HuduSchema.Tables) {
+
+foreach ($tableschema in $DatasetSchema.tables) {
     try {
-        Invoke-TabulationTask -Tab $tab -AllCompanies $all_companies -AccessToken $accessToken -DatasetId $DataSet -DryRun:$DryRun
+    Invoke-HuduTabulation -Schema $tableSchema -tableName $tableSchema.Name -Token $accessToken -DatasetId $Dataset -WorkspaceId $workspace.id
     } catch {
         Write-ErrorObjectsToFile -Name "Tabulation-Err" -ErrorObject @{
-            Func   = $tab.function
-            Params = $tab.depends
+            Func   = $Dataset
+            Schema = $Schema
             Error  = $_
         }
     }
