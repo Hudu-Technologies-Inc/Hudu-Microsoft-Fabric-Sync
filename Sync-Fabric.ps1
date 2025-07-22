@@ -42,12 +42,12 @@ $tenantId = $tenantId ?? $registration.tenantId
 if ($null -ne $clientSecret) {
     Set-PrintAndLog -message "client secret was retrieved. Assuming application auth." -Color Green
     $tokenResult = Get-MsalToken -ClientId $clientId -TenantId $tenantId -ClientSecret $clientSecret -Scopes $scope
-    $accessToken = $accessToken ?? $tokenResult.AccessToken
+    $accessToken =  $tokenResult.AccessToken
 } else {
     Set-PrintAndLog -message "No client secret was retrieved. Assuming Device Login." -Color Green
     Start-Process "https://microsoft.com/devicelogin"
-    $tokenResult = $tokenResult ?? $(Get-MsalToken -ClientId $clientId -TenantId $tenantId -DeviceCode -Scopes $scope)
-    $accessToken = $accessToken ?? $tokenResult.AccessToken
+    $tokenResult = $(Get-MsalToken -ClientId $clientId -TenantId $tenantId -DeviceCode -Scopes $scope)
+    $accessToken =  $tokenResult.AccessToken
 }
 
 
@@ -86,28 +86,24 @@ Set-PrintAndLog -message "Using Dataset $($DataSet | ConvertTo-Json -Depth 10)" 
 #### Part 3- Get useful source data and Tabulate it
 ##
 #
-$AllResults = @()
-$fetchIdx = 0
+$Results     = @{}
+$AllResults  = @{}
+$fetchIdx    = 0
 $allCompanies = Get-HuduCompanies
 
-foreach ($company in $allCompanies) {
-    $Results = @{}
-    
-    foreach ($f in $HuduSchema.Fetch) {
-        $fetchIdx++
-        $completionPercentage = Get-PercentDone -Current $fetchIdx -Total $HuduSchema.Fetch.Count
+foreach ($f in $HuduSchema.Fetch) {
+    $fetchIdx++
+    $completionPercentage = Get-PercentDone -Current $fetchIdx -Total $HuduSchema.Fetch.Count
 
-        $name = $f.Name
-        if (-not $name -or -not $f.Command -or -not $f.Filter) {
-            Write-Warning "Malformed fetch entry: $($f | Out-String)"
-            continue
-        }
+    $name = $f.Name
+    if (-not $name -or -not $f.Command -or -not $f.Filter) {
+        Write-Warning "Malformed fetch entry: $($f | Out-String)"
+        continue
+    }
 
-        $table = $HuduSchema.Tables | Where-Object { $_.columns -match $name }
-        $isPerCompany = $table.perCompany -eq $true
-
-        if ($isPerCompany) {
-            Write-Host "Fetching (per-company): $name for company $($company.name)"
+    if ($f.perCompany) {
+        foreach ($company in $allCompanies) {
+            Write-Host "Fetching: $name (per-company: $($company.name))"
 
             $raw = & $f.Command
             if ($raw -is [System.Collections.IEnumerable]) {
@@ -115,74 +111,99 @@ foreach ($company in $allCompanies) {
             }
 
             $filtered = & $f.Filter $raw
-
-            # Inject company_id
-            if ($filtered -is [pscustomobject]) {
-                Add-Member -InputObject $filtered -MemberType NoteProperty -Name "company_id" -Value $company.id -Force
-            }
+            $row = @{}
 
             foreach ($prop in $filtered.PSObject.Properties) {
-                $Results[$prop.Name] = $prop.Value
+                $row[$prop.Name] = $prop.Value
             }
+            $row["company_id"] = $company.id
 
-            Set-PrintAndLog "$name → $($filtered | ConvertTo-Json -Compress)" -Color Cyan
-        }
-        else {
-            # Only fetch global values once (on first loop)
-            if ($company -eq $allCompanies[0]) {
-                Write-Host "Fetching (global): $name"
-
-                $raw = & $f.Command
-                $filtered = & $f.Filter $raw
-
-                foreach ($prop in $filtered.PSObject.Properties) {
-                    $Results[$prop.Name] = $prop.Value
-                }
-
-                Set-PrintAndLog "$name → $($filtered | ConvertTo-Json -Compress)" -Color Cyan
+            if (-not $AllResults.ContainsKey($name)) {
+                $AllResults[$name] = @()
             }
+            $AllResults[$name] += [pscustomobject]$row
+
+            Set-PrintAndLog "$name → $($row | ConvertTo-Json -Compress)" -Color Cyan
+        }
+    } else {
+        Write-Host "Fetching: $name (global)"
+        $raw = & $f.Command
+        $filtered = & $f.Filter $raw
+
+        $row = @{}
+        foreach ($prop in $filtered.PSObject.Properties) {
+            $row[$prop.Name] = $prop.Value
+            $Results[$prop.Name] = $prop.Value
         }
 
-        Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
+        if (-not $AllResults.ContainsKey($name)) {
+            $AllResults[$name] = @()
+        }
+        $AllResults[$name] += [pscustomobject]$row
+
+        Set-PrintAndLog "$name → $($row | ConvertTo-Json -Compress)" -Color Cyan
     }
 
-    $AllResults += [pscustomobject]$Results
+    Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
 }
-
-# Then later, push $AllResults to Fabric table
 
 #### Part 4- Dynamically Submit Data based on how you configured your schema nd tabulation map
 ##
 #
-foreach ($tableSchema in $HuduSchema.Tables) {
-    $row = @{}
-    foreach ($col in $tableSchema.columns) {
-        $row[$col] = $Results[$col]  # If missing, will be $null
+foreach ($table in $HuduSchema.Tables) {
+    $tableName = $table.name
+    $isPerCompany = $table.perCompany
+    $finalRows = @()
+
+    if ($isPerCompany) {
+        foreach ($company in $allCompanies) {
+            $row = @{ company_id = $company.id }
+
+            foreach ($col in $table.columns) {
+                $entries = $AllResults[$col]
+                if (-not $entries) { continue }
+
+                $match = $entries | Where-Object { $_.company_id -eq $company.id }
+                $row[$col] = if ($match) { $match[0].$col } else { 0 }
+            }
+
+            $finalRows += [pscustomobject]$row
+        }
+    } else {
+        $row = @{}
+        foreach ($col in $table.columns) {
+            $entries = $AllResults[$col]
+            if ($entries) {
+                $row[$col] = $entries[0].$col
+            }
+        }
+        $finalRows += [pscustomobject]$row
     }
 
-    Write-Host "[*] Tabulating: $($tableSchema.Name)..."
-    foreach ($key in $Results.Keys) {
-        Set-Variable -Name $key -Value $Results[$key] -Scope Local
-        Set-PrintAndLog "Bound variable `$${key} = $($Results[$key])" -Color DarkGray
-    }
-    if ($druRun) {
-        continue
-    }
 
     try {
-        invoke-HuduTabulation `
-            -Schema $tableSchema `
-            -TableName $tableSchema.name `
+        Write-Host "tabulate: $tableName $($tableSchema | ConvertTo-Json -depth 4)"
+        $finalHashRows = $finalRows | ForEach-Object {
+            if ($_ -is [hashtable]) {
+                $_
+            } else {
+                $_ | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
+            }
+        }
+        Invoke-HuduTabulation `
+            -Schema $table `
+            -TableName $tableName `
             -Token $accessToken `
             -DatasetId $dataset `
             -WorkspaceId $workspace.id `
-            -Values $AllResults
+            -Values $finalHashRows
+
 
 
     } catch {
         Write-ErrorObjectsToFile -Name "Tabulation-Err" -ErrorObject @{
-            Table  = $tableSchema
-            Row    = $row
+            finalRows  = $finalHashRows
+            tablename    = $tablename
             Error  = $_
         }
     }
