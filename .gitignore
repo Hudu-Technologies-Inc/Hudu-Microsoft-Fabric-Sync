@@ -7,7 +7,7 @@ logs*/                # Any directory starting with 'logs'
 tmp/
 tmp*/                 # Any tmp folder
 **/tmp*/              # Any nested tmp folder
-
+*.json
 # === Schemas ===
 !My-Schema.ps1
 *[Ss]chema*.ps1
