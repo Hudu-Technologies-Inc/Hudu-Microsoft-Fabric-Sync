@@ -128,45 +128,47 @@ foreach ($table in $HuduSchema.Tables) {
     # enumerate rows in the expected format based on whether table is per-company or not.
     if ($isPerCompany) {
     foreach ($company in $allCompanies) {
-        $row = @{ company_id = $company.id }
+        $row = @{ company_id = $company.id 
+                  company_name = $company.name
+        }
 
         foreach ($col in $table.columns) {
-                $entries = $AllResults[$col]
-                if (-not $entries) { continue }
+            $entries = $AllResults[$col]
+            if (-not $entries) { continue }
 
-                # Try to match company directly on filtered result
-                $matched = $entries | Where-Object {
-                    $u = $_
-                    $u.company_id -eq $company.id
-                }
+            # Try to match company directly on filtered result
+            $matched = $entries | Where-Object {
+                $u = $_
+                $u.company_id -eq $company.id
+            }
 
-                # If that fails and there's __original, re-filter that per company
-                if (-not $matched -and $entries[0].PSObject.Properties.Match('__original')) {
-                    # Grab the fetch definition (from $HuduSchema.Fetch) to access its Filter
-                    $fetchDef = $HuduSchema.Fetch | Where-Object { $_.Name -eq $col }
+            # If that fails and there's __original, re-filter that per company
+            if (-not $matched -and $entries[0].PSObject.Properties.Match('__original')) {
+                # Grab the fetch definition (from $HuduSchema.Fetch) to access its Filter
+                $fetchDef = $HuduSchema.Fetch | Where-Object { $_.Name -eq $col }
 
-                    if ($null -ne $fetchDef.Filter) {
-                        $perCompanyOriginals = @($entries | Select-Object -ExpandProperty __original) | Where-Object {
-                            $_.company_id -eq $company.id
-                        }
-                        # Reapply the original filter on this subset
-                        $reFiltered = & $fetchDef.Filter $perCompanyOriginals
+                if ($null -ne $fetchDef.Filter) {
+                    $perCompanyOriginals = @($entries | Select-Object -ExpandProperty __original) | Where-Object {
+                        $_.company_id -eq $company.id
+                    }
+                    # Reapply the original filter on this subset
+                    $reFiltered = & $fetchDef.Filter $perCompanyOriginals
 
-                        # If it returned a PSCustomObject, grab the value under the expected key
-                        if ($reFiltered -is [pscustomobject]) {
-                            $row[$col] = $reFiltered.$col ?? 0
-                        } else {
-                            $row[$col] = 0
-                        }
+                    # If it returned a PSCustomObject, grab the value under the expected key
+                    if ($reFiltered -is [pscustomobject]) {
+                        $row[$col] = $reFiltered.$col ?? 0
                     } else {
                         $row[$col] = 0
                     }
-                }
-                else {
-                    # Matched normally — use the value
-                    $row[$col] = @($matched).Count
+                } else {
+                    $row[$col] = 0
                 }
             }
+            else {
+                # Matched normally — use the value
+                $row[$col] = @($matched).Count
+            }
+        }
 
         $finalRows += [pscustomobject]$row
         }
@@ -191,14 +193,12 @@ foreach ($table in $HuduSchema.Tables) {
         # only commit data if not in dry-run
         Write-Host "tabulate: $tableName $($finalHashRows | ConvertTo-Json -depth 8)" -ForegroundColor Yellow
         if ($true -eq $dryRun) {Set-PrintAndLog -message "dry-run, skipping submission of data!" -Color DarkYellow; continue}
+        Push-DataToTable -workspaceId $workspace.id `
+                         -datasetId $Dataset `
+                         -TableName $TableName `
+                         -Token $accessToken `
+                         -rows $finalHashRows        
 
-        Invoke-HuduTabulation `
-            -Schema $table `
-            -TableName $tableName `
-            -Token $accessToken `
-            -DatasetId $dataset `
-            -WorkspaceId $workspace.id `
-            -Values $finalHashRows
     } catch {
         Write-ErrorObjectsToFile -Name "Tabulation-Err" -ErrorObject @{
             finalRows  = $finalHashRows
