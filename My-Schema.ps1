@@ -19,7 +19,6 @@ $tenantIdSecretName = "tenantid-secretname"
 $HuduBaseUrl= "yoururl.huducloud.com"
 
 # What will you call your new Fabric workspace?
-$WorkspaceName = "myworkspace"
 $age_threshold = (Get-Date).AddMonths(-6)
 
 
@@ -32,8 +31,8 @@ $HuduSchema = @{
             Command = { Get-HuduCompanies }
             dataType = 'Int64'
             Filter = {
-                param ($items)
-                [pscustomobject]@{ all_companies = $items.Count }
+                param ($companies)
+                [pscustomobject]@{ all_companies = $companies.Count }
             }
         },
         @{
@@ -41,8 +40,8 @@ $HuduSchema = @{
             Command = { Get-HuduAssets }
             dataType = 'Int64'
             Filter = {
-                param ($items)
-                [pscustomobject]@{ all_assets = $items.Count }
+                param ($assets)
+                [pscustomobject]@{ all_assets = $assets.Count }
             }
         },
         @{
@@ -50,8 +49,8 @@ $HuduSchema = @{
             Command = { Get-HuduArticles }
             dataType = 'Int64'
             Filter = {
-                param ($items)
-                [pscustomobject]@{ all_articles = $items.Count }
+                param ($articles)
+                [pscustomobject]@{ all_articles = $articles.Count }
             }
         },
         @{
@@ -59,8 +58,8 @@ $HuduSchema = @{
             Command = { Get-HuduAssetLayouts }
             dataType = 'Int64'
             Filter = {
-                param ($items)
-                [pscustomobject]@{ all_assetlayouts = $items.Count }
+                param ($assetlayouts)
+                [pscustomobject]@{ all_assetlayouts = $assetlayouts.Count }
             }
         },
         @{
@@ -68,8 +67,8 @@ $HuduSchema = @{
             Command = { Get-HuduWebsites }
             dataType = 'Int64'
             Filter = {
-                param ($items)
-                [pscustomobject]@{ all_websites = $items.Count }
+                param ($websites)
+                [pscustomobject]@{ all_websites = $websites.Count }
             }
         },
         @{
@@ -77,8 +76,8 @@ $HuduSchema = @{
             Command = { Get-HuduUploads }
             dataType = 'Int64'
             Filter = {
-                param ($items)
-                [pscustomobject]@{ all_uploads = $items.Count }
+                param ($uploads)
+                [pscustomobject]@{ all_uploads = $uploads.Count }
             }
         },
         @{
@@ -86,8 +85,8 @@ $HuduSchema = @{
             Command = { Get-HuduUsers }
             dataType = 'Int64'
             Filter = {
-                param ($items)
-                [pscustomobject]@{ num_users = $items.Count }
+                param ($users)
+                [pscustomobject]@{ num_users = $users.Count }
             }
         },
         @{
@@ -132,8 +131,7 @@ $HuduSchema = @{
             dataType = 'Int64'
             Filter = {
                 param ($pw)
-                $age_threshold = (Get-Date).AddMonths(-6)
-                [pscustomobject]@{ old_passwords = ($pw | Where-Object { [datetime]$_.updated_at -lt $age_threshold }).Count }
+                [pscustomobject]@{ old_passwords = ($pw | Where-Object {$null -ne $_.updated_at -and [datetime]$_.updated_at -lt $age_threshold }).Count }
             }
         },
         @{
@@ -169,6 +167,8 @@ $HuduSchema = @{
             dataType = 'Int64'
             Filter = {
                 param ($articles)
+                $addition + $articles
+
                 [pscustomobject]@{ draft_articles = ($articles | Where-Object { $_.Draft -eq $true }).Count }
             }
         },
