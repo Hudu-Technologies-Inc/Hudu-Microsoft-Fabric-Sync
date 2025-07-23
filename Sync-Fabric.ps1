@@ -20,7 +20,7 @@ foreach ($file in $(Get-ChildItem -Path ".\helpers" -Filter "*.ps1" -File | Sort
     . $file.FullName
 }
 # get secrets or ascertain alternative path
-Get-EnsuredModule -name "Az.Keystore"
+Get-EnsureModule -name "Az.KeyVault"
 if ($UseAzureKeyStore) {
     if (-not (Get-AzContext)) { Connect-AzAccount | Out-Null }
     $HuduApiKey = Get-AzKeyVaultSecret -VaultName $AzVault_Name -Name $HuduApiKeySecretName -AsPlainText
@@ -42,7 +42,7 @@ Add-Content -Path $logFile -Value "Starting Fabric Sync at $(Get-Date). Running 
 Set-LastSyncedTimestampFile -DirectoryPath $workdir -schemaName $([System.IO.Path]::GetFileNameWithoutExtension($schemaFile))
 $AuthStrategyMessage = Get-AuthStrategyMessage  -clientIdPresent (-not [string]::IsNullOrWhiteSpace($clientId)) -tenantIdPresent (-not [string]::IsNullOrWhiteSpace($tenantId)) -clientSecretPresent (-not [string]::IsNullOrWhiteSpace($clientSecret))
 Set-PrintAndLog -message "$AuthStrategyMessage" -color Magenta
-Get-EnsuredModule -name "MSAL.PS"
+Get-EnsureModule -name "MSAL.PS"
 Set-LoggedStartupItems
 $registration = EnsureRegistration -ClientId $clientId -TenantId $tenantId -delegatedPermissions $delegatedPermissions -ApplicationPermissions $ApplicationPermissions
 $clientId = $clientId ?? $registration.clientId

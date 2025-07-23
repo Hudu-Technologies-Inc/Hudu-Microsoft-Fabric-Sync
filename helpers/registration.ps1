@@ -38,7 +38,7 @@ function Set-AzureAppRegistration {
 
     # install/import az module, set initial AZ context
     Write-Host "Ensuring AZ Moduleis installed and loaded. (be patient, it takes a while sometimes.)"
-    Get-EnsuredModule -name "Az"
+    Get-EnsureModule -name "Az"
 
     if (-not (Get-AzContext)) {
         try {

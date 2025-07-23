@@ -2,22 +2,7 @@ $delegatedPermissions = $delegatedPermissions = @("Dataset.ReadWrite.All","Works
 $ApplicationPermissions = @("Tenant.Read.All","Dataset.ReadWrite.All","Workspace.ReadWrite.All")
 $scope= "https://analysis.windows.net/powerbi/api/.default"
 # fallback values for improper or null workspace/dataset name
-function Get-CurrentUserEmail {
-    try {
-        $email = ([System.DirectoryServices.AccountManagement.UserPrincipal]::Current).EmailAddress
-        if (-not $email -or $email -eq '') {
-            $upn = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).Name
-            if ($upn -match '@') {
-                return $upn
-            } else {
-                return "$env:USERNAME@$env:USERDNSDOMAIN"
-            }
-        }
-        return $email
-    } catch {
-        return "$env:USERNAME@$env:USERDNSDOMAIN"
-    }
-}
+
 function Set-AuthorizedUserForWorkspace {
     param (
         [Parameter(Mandatory)]

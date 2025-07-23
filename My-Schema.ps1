@@ -64,15 +64,6 @@ $HuduSchema = @{
             }
         },
         @{
-            Name = 'all_processes'
-            Command = { Get-HuduProcesses }
-            dataType = 'Int64'
-            Filter = {
-                param ($items)
-                [pscustomobject]@{ all_processes = $items.Count }
-            }
-        },
-        @{
             Name = 'all_websites'
             Command = { Get-HuduWebsites }
             dataType = 'Int64'
@@ -198,7 +189,6 @@ $HuduSchema = @{
             columns     = @(
                 "all_assets",
                 "all_articles",
-                "all_processes",
                 "all_websites",
                 "all_magic_dashes",
                 "top_author_email",
