@@ -1,19 +1,20 @@
 param (
-    [string]$schemaFile=".\masoni-schema.ps1",
+    [string]$schemaFile,
     [bool]$dryRun = $false
 )
 #### Part 0- Set up
 ##
 #
 # define sensitive vars to unset at the end
-$sensitiveVars = @("clientSecret","HuduApiKey","clientId","tenantId")
+$sensitiveVars = @("clientSecret","HuduApiKey","clientId","tenantId","tokenResult","accessToken","registration","Results","AllResults")
 $Results     = @{}
 $AllResults  = @{}
 $workdir = $PSScriptRoot
 $defaultSchemaPath = Join-Path $workdir "My-Schema.ps1"
 if (-not $schemaFile -or -not (Test-Path $schemaFile)) {$schemaFile = $defaultSchemaPath}
-Write-Host "Fabric Sync started with schema file: $schemaFile $(if ($dryRun) {'in dry run mode.'})"
+Write-Host "Fabric Sync started with schema file: $schemaFile $(if ($dryRun) {'in dry run mode.'}); Loading Chema"
 . $schemaFile
+
 foreach ($file in $(Get-ChildItem -Path ".\helpers" -Filter "*.ps1" -File | Sort-Object Name)) {
     Write-Host "Importing: $($file.Name)" -ForegroundColor DarkBlue
     . $file.FullName
@@ -38,6 +39,7 @@ if ($UseAzureKeyStore) {
 #
 # perform startup checks and kick off registration if client or tenant vars are blank/null
 Add-Content -Path $logFile -Value "Starting Fabric Sync at $(Get-Date). Running self-checks and setting fallback values."
+Set-LastSyncedTimestampFile -DirectoryPath $workdir
 $AuthStrategyMessage = Get-AuthStrategyMessage  -clientIdPresent (-not [string]::IsNullOrWhiteSpace($clientId)) -tenantIdPresent (-not [string]::IsNullOrWhiteSpace($tenantId)) -clientSecretPresent (-not [string]::IsNullOrWhiteSpace($clientSecret))
 Set-PrintAndLog -message "$AuthStrategyMessage" -color Magenta
 Get-EnsuredModule -name "MSAL.PS"
@@ -104,15 +106,13 @@ foreach ($f in $HuduSchema.Fetch) {
     }
     Set-PrintAndLog -message "$name → $($row | ConvertTo-Json -Compress)" -Color Cyan
 
+    # store original data for per-company filtering later,
     $row.__original = $raw
-
 
     if (-not $AllResults.ContainsKey($name)) {
         $AllResults[$name] = @()
     }
     $AllResults[$name] += [pscustomobject]$row
-
-
 
     Write-Progress -Activity "Fetching $name... ($fetchIdx / $($HuduSchema.Fetch.Count))" -Status "$completionPercentage%" -PercentComplete $completionPercentage
 }

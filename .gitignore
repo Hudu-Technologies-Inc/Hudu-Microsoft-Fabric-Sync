@@ -19,6 +19,8 @@ errored/
 */errored/
 logs/errored*
 **/errored/*
+last_synced_at*
+*last_synced_at*
 
 # === PowerShell Environment Files ===
 environ*.ps1
