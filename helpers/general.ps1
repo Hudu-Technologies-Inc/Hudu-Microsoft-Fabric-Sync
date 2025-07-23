@@ -1,35 +1,19 @@
-function Get-EnsuredModule {
-    param ($Name)
-    if (-not (Get-Module -ListAvailable -Name $Name)) {
-        Install-Module $Name -Scope CurrentUser -Force -AllowClobber
-    }
-    Import-Module $Name -Force
-}
-function Unwrap-SinglePropertyWrapper {
+function Get-EnsureModule {
     param (
         [Parameter(Mandatory)]
-        $InputObject
+        [string]$Name
     )
 
-    $obj = $InputObject
-    write-host "before: $($obj | ConvertTo-Json -depth 6 | Out-String)"
-    while (
-        $obj -isnot [string] -and
-        ($obj -is [hashtable] -or $obj -is [pscustomobject]) -and
-        $obj.PSObject.Properties.Count -eq 1
-    ) {
-        $value = $obj.PSObject.Properties[0].Value
-
-        # Break loop if it's scalar or array
-        if ($value -is [string] -or $value -is [int] -or $value -is [array]) {
-            break
-        }
-        
-        $obj = $value
+    if (-not (Get-Module -ListAvailable -Name $Name)) {
+        Install-Module -Name $Name -Scope CurrentUser -Repository PSGallery -Force -AllowClobber `
+            -ErrorAction SilentlyContinue *> $null
     }
-    write-host "after: $($obj | ConvertTo-Json -depth 6 | Out-String)"
-    read-host
-    return $obj
+
+    try {
+        Import-Module -Name $Name -Force -ErrorAction Stop *> $null
+    } catch {
+        Write-Warning "Failed to import module '$Name': $($_.Exception.Message)"
+    }
 }
 function Unset-Vars {
     param (
@@ -43,11 +27,6 @@ function Unset-Vars {
             Write-Host "Unset `$${varname} from scope: $scope"
         }
     }
-}
-
-function Prompt-IfMissing {
-    param ($varRef, $prompt)
-    if (-not $varRef.Value) { $varRef.Value = Read-Host $prompt }
 }
 function Write-ErrorObjectsToFile {
     param (
@@ -170,29 +149,6 @@ function Select-ObjectFromList($objects,$message,$allowNull = $false) {
         }
     }
 }
-function Get-SafeFilename {
-    param([string]$Name,
-        [int]$MaxLength=25
-    )
-
-    # If there's a '?', take only the part before it
-    $BaseName = $Name -split '\?' | Select-Object -First 1
-
-    # Extract extension (including the dot), if present
-    $Extension = [System.IO.Path]::GetExtension($BaseName)
-    $NameWithoutExt = [System.IO.Path]::GetFileNameWithoutExtension($BaseName)
-
-    # Sanitize name and extension
-    $SafeName = $NameWithoutExt -replace '[\\\/:*?"<>|]', '_'
-    $SafeExt = $Extension -replace '[\\\/:*?"<>|]', '_'
-
-    # Truncate base name to 25 chars
-    if ($SafeName.Length -gt $MaxLength) {
-        $SafeName = $SafeName.Substring(0, $MaxLength)
-    }
-
-    return "$SafeName$SafeExt"
-}
 function Get-SafeTitle {
     param ([string]$Name)
 
@@ -204,4 +160,32 @@ function Get-SafeTitle {
     $safe = $decoded -replace '[\\/:*?"<>|]', ' '
     $safe = ($safe -replace '\s{2,}', ' ').Trim()
     return $safe
+}
+function Set-LastSyncedTimestampFile {
+    param (
+        [Parameter(Mandatory)]
+        [string]$DirectoryPath,
+
+        [Parameter(Mandatory)]
+        [string]$schemaName
+    )
+
+    if (-not (Test-Path $DirectoryPath)) {
+        throw "Directory '$DirectoryPath' does not exist."
+    }
+
+    $friendlySchemaName = (Get-SafeTitle $schemaName)
+    $filePrefix = "${friendlySchemaName}_last_synced_at"
+
+    Get-ChildItem -Path $DirectoryPath -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "$filePrefix*" } |
+        Remove-Item -Force
+
+    $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $newFileName = "${filePrefix}_$timestamp"
+    $newFilePath = Join-Path $DirectoryPath $newFileName
+
+    New-Item -Path $newFilePath -ItemType File -Force | Out-Null
+
+    Write-Host "Created sync marker: $newFilePath"
 }
