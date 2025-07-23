@@ -5,25 +5,6 @@ function Get-EnsuredModule {
     }
     Import-Module $Name -Force
 }
-function Set-LastSyncedTimestampFile {
-    param (
-        [Parameter(Mandatory)]
-        [string]$DirectoryPath
-    )
-
-    if (-not (Test-Path $DirectoryPath)) {
-        throw "Directory '$DirectoryPath' does not exist."
-    }
-
-    Get-ChildItem -Path $DirectoryPath -Filter 'last_synced_at*' -File -ErrorAction SilentlyContinue | Remove-Item -Force
-
-    $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $newFile = Join-Path $DirectoryPath "last_synced_at_$timestamp"
-
-    New-Item -Path $newFile -ItemType File -Force | Out-Null
-
-    Write-Host "Created sync marker: $newFile"
-}
 
 function Unwrap-SinglePropertyWrapper {
     param (
@@ -224,4 +205,24 @@ function Get-SafeTitle {
     $safe = $decoded -replace '[\\/:*?"<>|]', ' '
     $safe = ($safe -replace '\s{2,}', ' ').Trim()
     return $safe
+}
+function Set-LastSyncedTimestampFile {
+    param (
+        [Parameter(Mandatory)]
+        [string]$DirectoryPath,
+        [string]$schemaName
+    )
+
+    if (-not (Test-Path $DirectoryPath)) {
+        throw "Directory '$DirectoryPath' does not exist."
+    }
+
+    Get-ChildItem -Path $DirectoryPath -Filter 'last_synced_at*' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+
+    $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $newFile = Join-Path $DirectoryPath "$(Get-SafeTitle $schemaName)_last_synced_at_$timestamp"
+
+    New-Item -Path $newFile -ItemType File -Force | Out-Null
+
+    Write-Host "Created sync marker: $newFile"
 }

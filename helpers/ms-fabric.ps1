@@ -140,16 +140,15 @@ function Set-Workspace {
     Set-PrintAndLog -message "Workspace not found. Creating new workspace: $name"
     $body = @{ name = $name } | ConvertTo-Json
     $workspace = Invoke-RestMethod -Uri "https://api.powerbi.com/v1.0/myorg/groups" -Method Post -Headers @{ Authorization = "Bearer $token" } -Body $body -ContentType "application/json"
-    
-    if ($null -ne $workspace.id){
+
+    if ($null -ne $workspace.id -and $(get-azcontext)){
         try {
-            Set-AuthorizedUserForWorkspace -userEmail "$(Get-CurrentUserEmail)" -token $token -workspaceId $workspace.id
+            Set-AuthorizedUserForWorkspace -userEmail "$((get-azcontext).account)" -token $token -workspaceId $workspace.id
         } catch {
             Set-PrintAndLog -message "Was unable to set current user as viewing member of this workspace. Ask your admin to add you in powerBI admin console!" -Color Magenta
         }
     }
 
-    
     Set-PrintAndLog -message "Workspace created: $name (ID: $($workspace.id))"
     return $workspace
 }

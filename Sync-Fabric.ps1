@@ -20,8 +20,8 @@ foreach ($file in $(Get-ChildItem -Path ".\helpers" -Filter "*.ps1" -File | Sort
     . $file.FullName
 }
 # get secrets or ascertain alternative path
+Get-EnsuredModule -name "Az.Keystore"
 if ($UseAzureKeyStore) {
-    Get-EnsuredModule -name "Az.Keystore"
     if (-not (Get-AzContext)) { Connect-AzAccount | Out-Null }
     $HuduApiKey = Get-AzKeyVaultSecret -VaultName $AzVault_Name -Name $HuduApiKeySecretName -AsPlainText
     $clientId   = Get-AzKeyVaultSecret -VaultName $AzVault_Name -Name $tenantIdSecretName -AsPlainText
@@ -39,7 +39,7 @@ if ($UseAzureKeyStore) {
 #
 # perform startup checks and kick off registration if client or tenant vars are blank/null
 Add-Content -Path $logFile -Value "Starting Fabric Sync at $(Get-Date). Running self-checks and setting fallback values."
-Set-LastSyncedTimestampFile -DirectoryPath $workdir
+Set-LastSyncedTimestampFile -DirectoryPath $workdir -schemaName $([System.IO.Path]::GetFileNameWithoutExtension($schemaFile))
 $AuthStrategyMessage = Get-AuthStrategyMessage  -clientIdPresent (-not [string]::IsNullOrWhiteSpace($clientId)) -tenantIdPresent (-not [string]::IsNullOrWhiteSpace($tenantId)) -clientSecretPresent (-not [string]::IsNullOrWhiteSpace($clientSecret))
 Set-PrintAndLog -message "$AuthStrategyMessage" -color Magenta
 Get-EnsuredModule -name "MSAL.PS"
