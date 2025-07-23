@@ -1,5 +1,5 @@
 param (
-    [string]$schemaFile,
+    [string]$schemaFile=".\masoni-schema.ps1",
     [bool]$dryRun = $false
 )
 #### Part 0- Set up
@@ -64,18 +64,8 @@ $WorkspaceName     = $SchemaResult.WorkspaceName
 $DatasetName       = $SchemaResult.DatasetName
 $DatasetSchema     = $SchemaResult.DatasetDefinition
 
-# Inject company_id and company_name into each perCompany table
-foreach ($table in $DatasetSchema.tables) {
-    if ($table.perCompany -and -not ($table.columns | Where-Object { $_.name -eq 'company_id' })) {
-        $table.columns = @(
-            @{ name = 'company_id'; dataType = 'Int64' }
-            @{ name = 'company_name'; dataType = 'String' }            
-        ) + $table.columns
-    }
-}
-
 $DatasetSchemaJson = $DatasetSchema | ConvertTo-Json -Depth 10
-
+$DatasetSchemaJson | Out-File "schema.json"
 # Find or Create Workspace
 $Workspace = Set-Workspace -name $WorkspaceName -token $accessToken
 if (-not $Workspace) {Set-PrintAndLog -message "Couldn’t find or create workspace $WorkspaceName. Review your settings and permissions." -Color Red; exit 1}
@@ -196,6 +186,7 @@ foreach ($table in $HuduSchema.Tables) {
         $finalHashRows = $finalRows | ForEach-Object {
             if ($_ -is [hashtable]) { $_ } else {
                 $_ | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable }}
+        $finalHashRows | ConvertTo-Json -Depth 10 | Out-File "./asdf.json"
 
         # only commit data if not in dry-run
         Write-Host "tabulate: $tableName $($finalHashRows | ConvertTo-Json -depth 8)" -ForegroundColor Yellow

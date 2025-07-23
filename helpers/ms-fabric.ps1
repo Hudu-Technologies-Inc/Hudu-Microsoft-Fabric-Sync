@@ -33,12 +33,19 @@ function Convert-HuduSchemaToDataset {
     $Tables = @()
     foreach ($table in $HuduSchema.Tables) {
         $columns = @()
+
         foreach ($colName in $table.columns) {
             $fetch = $FetchMap[$colName]
             $columns += [pscustomobject]@{
                 name     = $colName
                 dataType = $fetch.dataType ?? "String"
             }
+        }
+        if ($true -eq $table.PerCompany){
+            $columns += [pscustomobject]@{
+                name     = 'company_id'; dataType = 'Int64'}            
+            $columns += [pscustomobject]@{
+                name     = 'company_name'; dataType = 'String'}  
         }
 
         $Tables += [pscustomobject]@{
@@ -201,7 +208,7 @@ function Invoke-HuduTabulation {
         datasetId = $DatasetId
         TableName = $TableName
         Token     = $Token
-        rows      = $safeData
+        rows      = $Values
     }
     # Push to Power BI (or your target)
     Push-DataToTable @Params
