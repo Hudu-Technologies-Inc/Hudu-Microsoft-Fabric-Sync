@@ -2,6 +2,54 @@ $delegatedPermissions = $delegatedPermissions = @("Dataset.ReadWrite.All","Works
 $ApplicationPermissions = @("Tenant.Read.All","Dataset.ReadWrite.All","Workspace.ReadWrite.All")
 $scope= "https://analysis.windows.net/powerbi/api/.default"
 # fallback values for improper or null workspace/dataset name
+function Get-CurrentUserEmail {
+    try {
+        $email = ([System.DirectoryServices.AccountManagement.UserPrincipal]::Current).EmailAddress
+        if (-not $email -or $email -eq '') {
+            $upn = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).Name
+            if ($upn -match '@') {
+                return $upn
+            } else {
+                return "$env:USERNAME@$env:USERDNSDOMAIN"
+            }
+        }
+        return $email
+    } catch {
+        return "$env:USERNAME@$env:USERDNSDOMAIN"
+    }
+}
+function Set-AuthorizedUserForWorkspace {
+    param (
+        [Parameter(Mandatory)]
+        [string]$userEmail,
+        [Parameter(Mandatory)]
+        [string]$token,
+        [Parameter(Mandatory)]
+        [string]$workspaceId,
+        [ValidateSet("User", "Group", "ServicePrincipal")]
+        [string]$principalType = "User",
+        [ValidateSet("Admin", "Member", "Contributor", "Viewer")]
+        [string]$accessRights = "Admin"
+    )
+
+    $headers = @{ Authorization = "Bearer $token" }
+
+    $body = @{
+        identifier           = $userEmail
+        principalType        = $principalType
+        groupUserAccessRight = $accessRights
+    } | ConvertTo-Json -Depth 5
+
+    try {
+        $uri = "https://api.powerbi.com/v1.0/myorg/groups/$workspaceId/users"
+        $response = Invoke-RestMethod -Uri $uri -Method Post -Headers $headers -Body $body -ContentType "application/json"
+        Write-Host "Successfully added $userEmail to workspace $workspaceId as $accessRights"
+    } catch {
+        Write-Warning "Failed to add $userEmail to workspace $workspaceId $($_.Exception.Message)"
+    }
+}
+
+
 
 function Get-AuthStrategyMessage {
     param (
@@ -92,7 +140,16 @@ function Set-Workspace {
     Set-PrintAndLog -message "Workspace not found. Creating new workspace: $name"
     $body = @{ name = $name } | ConvertTo-Json
     $workspace = Invoke-RestMethod -Uri "https://api.powerbi.com/v1.0/myorg/groups" -Method Post -Headers @{ Authorization = "Bearer $token" } -Body $body -ContentType "application/json"
+    
+    if ($null -ne $workspace.id){
+        try {
+            Set-AuthorizedUserForWorkspace -userEmail "$(Get-CurrentUserEmail)" -token $token -workspaceId $workspace.id
+        } catch {
+            Set-PrintAndLog -message "Was unable to set current user as viewing member of this workspace. Ask your admin to add you in powerBI admin console!" -Color Magenta
+        }
+    }
 
+    
     Set-PrintAndLog -message "Workspace created: $name (ID: $($workspace.id))"
     return $workspace
 }
