@@ -10,6 +10,8 @@ simply describe the data you want to commit in your schema json and rock-and-rol
 
 you can sync different schemas/datasets with different tables at different times if you even want to get that granular. A timestamp file for each schema that you sync will be placed in project folder for seeing sync-status at-a-glance. Each schemafile contains their own credential lookup info, so you can populate different schemafiles to different tenants if you so choose.
 
+you can utilize custom functions to obtain, transform, calculate, anything you want, however you want. Each measured item is specifically defined by you! Whatever measurements you define is dynamically processed to a new MS Fabric Table
+
 <img width="296" height="93" alt="image" src="https://github.com/user-attachments/assets/c97a7d49-a0c6-4b02-adb7-3b8bd9f7dc85" />
 
 Just design what data you want to fetch, which filters you want to apply on that data, and what property of that data you want to measure in your fetch definitions. In your table definitions, just place your tables where you want them and assign which columns they should be given by name. The rest will be calculated and sent to Fabric.
