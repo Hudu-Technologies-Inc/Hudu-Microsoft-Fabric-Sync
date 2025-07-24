@@ -92,17 +92,9 @@ When constructing custom filters, all you have to remember is to return a PSCust
 As long as you follow the pattern, you can calculate anything, anywhere, however you want. The scope of things you can calculate or measure is absolutely massive with just a little creativity!
 <img width="787" height="275" alt="image" src="https://github.com/user-attachments/assets/eb85696f-7862-4bb0-976d-a7c33b1ddec9" />
 
-Fetch data can be used across tables in your dataset and are easy to construct. 
-You can use the same upstream data, like in example to calculate or measure items across Hudu, or Per-Company. 
-Per-Company tables will take the original upstream data and recalculate / re-evaluate it, but as it relates to every company in your Hudu instace.
+Per-company calculations do require that the objects you're working with in 'Command' include a company Id, **but that's the only requirement** for secondary per-company filtering
 
-<img width="384" height="298" alt="image" src="https://github.com/user-attachments/assets/b09862b9-a579-4460-8112-6fbcc359ee8a" />
-
-Per-company calculations do require that the objects you're working with in 'Command' include a company Id, **but that's the only requirement.**
-
-<img width="2386" height="876" alt="image" src="https://github.com/user-attachments/assets/0bba863e-1e68-497b-91b4-66d648ec5352" />
-
-Entries require:
+Fetch Entries require:
 
 ##### Name
 This is the name you will reference from your table or between tables if reused
@@ -121,10 +113,17 @@ A filter has a (param), which represents the data you get from 'command'. With t
 
 
 #### Table Definition(s)
+
 Here, you define your tables and columns to be in an expected order for your dataset/schema.
+
+<img width="384" height="298" alt="image" src="https://github.com/user-attachments/assets/b09862b9-a579-4460-8112-6fbcc359ee8a" />
 
 Tables that are 'per-company' are calculated per-company and submitted 1-row-per-company
 Per-Company measurements have two additional columns (company id and company name) injected into them, so you can omit those from your definitions- they are automatic
+
+<img width="2386" height="876" alt="image" src="https://github.com/user-attachments/assets/0bba863e-1e68-497b-91b4-66d648ec5352" />
+
+Fetch data can be used across tabled and can use the same upstream data. For Example, if your fetch data represents the count of articles, if you place that fetch column in a per-company table and a general table, the general table will measure ALL articles with that filter condition, the per-company will measure THAT COMPANY's Articles that match your filter condition.
 
 ---
 
