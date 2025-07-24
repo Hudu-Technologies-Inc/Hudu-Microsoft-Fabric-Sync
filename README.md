@@ -23,7 +23,7 @@ The rest is **history** —
     - [Table Definition(s)](#table-definitions)
 - [2. Entra / Azure App Registration](#2-entra--azure-app-registration)
 - [3. Running and Invocation](#3-running-and-invocation)
-  - [3-A. Automating with Task Scheduler](#3-a-automating-with-task-scheduler)
+  - [3A Automating with Task Scheduler](#3a-automating-with-task-scheduler)
 
 ---
 
@@ -161,7 +161,7 @@ Once you have your Schema file(s) set up and ready, you can invoke a sync with
 ```
 Further, if you supply `-DryRun $true` as an argument, no data will be pushed to Fabric yet- which can be helpful during design phase. Instead, your would-be tables and rows are printed for your review.
 
-### Automating with Task Scheduler
+### 3A Automating with Task Scheduler
 
 **If you want regular reports with your chosen filters/metrics/tables**, you'll want to set up your secrets and names for secrets in Azure Key Store. After doing this, a pretty nifty way of accomplishing this deed is via Task Scheduler, which can be used to trigger metrics to sync whenever you'd like.
 
