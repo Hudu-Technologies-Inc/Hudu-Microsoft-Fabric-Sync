@@ -2,7 +2,9 @@
 
 connect Hudu datapoints to Microsoft Fabric with ease and flexibility
 
-simply describe the data you want to commit in your schema json and rock-and-roll.
+1. design your schema
+2. entra app registration
+3. the rest is history- rich, actionable, informative history``
 
 <img width="3050" height="1178" alt="example-startup" src="https://github.com/user-attachments/assets/9a59a519-7133-45c1-9c29-a48d61593908" />
 
