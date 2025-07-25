@@ -6,8 +6,7 @@ Connect Hudu datapoints to Microsoft Fabric with **ease and flexibility**.
 > 2. **Complete** Entra app registration  
 > 3. **Run and observe** your metrics come to life
 
-The rest is **history** —  
-**rich**, **actionable**, **informative** history.
+The rest is **history** — **rich**, **actionable**, **informative** history.
 
 <img width="3050" height="1178" alt="example-startup" src="https://github.com/user-attachments/assets/9a59a519-7133-45c1-9c29-a48d61593908" />
 
@@ -25,22 +24,17 @@ The rest is **history** —
 - [3. Running and Invocation](#3-running-and-invocation)
   - [3A Automating with Task Scheduler](#3a-automating-with-task-scheduler)
 
----
-
-## Overview
-
-*Intro paragraph here...*
 
 ---
 
 ## 1. Config and Setup
 
-The only file you'll need to edit is your schema definition file. you can edit My-Schema.ps1 in-place or you can make a copy of it to reference the original later.
+The only file you'll need to edit is your schema definition file. You can edit My-Schema.ps1 included in this repo or you can make a copy of it to reference the original later.
 
 ### 1-A. Schema File Variables
 
 In your schemafile, you can configure any/all of the below items-
-(registration info) ****if either of these is set to blank or null, powerBI registration script will help get you started****
+(registration info) ****if either of these is set to blank or null, the powerBI registration script will help get you started****
 - $clientId (PowerBI App Registration ID) 
 - $tenantId (Microsoft Tenant Id)
 
@@ -60,27 +54,28 @@ $age_threshold = (Get-Date).AddMonths(-6)
 
 ### 1-B. Schema Setup
 
-You can construct as many tables as you'd like, each being either per-company or generalized across companies
+You can construct as many tables as you'd like, each being either per-company or generalized across companies.
 
-Make a copy of My-Schema.ps1 (or edit directly if you'd like)
-The definitions for each columns comes down to a 'fetch definition' (how we get the data and what Fabric will expect) and the 'tables definitions' (the order of columns we want in Fabric)
+Make a copy of My-Schema.ps1 (or edit directly)
 
-you can utilize custom functions to obtain, transform, calculate, anything you want, however you want. Each measured item is specifically defined by you! Whatever measurements you define is dynamically processed to a new MS Fabric Table
+The definitions for each columns comes down to a 'fetch definition' (how we get the data and what Fabric will expect) and the 'tables definitions' (the order of columns we want in Fabric).
+
+You can utilize custom functions to obtain, transform, calculate, anything you want, however you want. Each measured item is specifically defined by you and completely customizable. Whatever measurements you define is dynamically processed to a new MS Fabric Table.
 
 <img width="296" height="93" alt="image" src="https://github.com/user-attachments/assets/c97a7d49-a0c6-4b02-adb7-3b8bd9f7dc85" />
 
-There are two parts to schema setup - 
-1- Fetch Definitions- this is the upstream data that you'll use and how you'd like to measure/filter it
-2- Table Definitions- organize the fields you designed in your 'Fetch' section into different tables. Define if you want to measaure certain tables per-company
+**There are two parts to schema setup -**
+1- Fetch Definitions - this is the upstream data that you'll use and how you'd like to measure/filter it.
+2- Table Definitions - organize the fields you designed in your 'Fetch' section into different tables. Define if you want to measaure certain tables per-company.
 
-> Fetch definitions can be reused between tables. Suppose you make a fetch definition to count all articles. You could then place that fetch definition in one table that counts them per-company and one that counts them across companies. It's the same source data, after all-
+> Fetch definitions can be reused between tables. Suppose you make a fetch definition to count all articles; you could then place that fetch definition in one table that counts them per-company and one that counts them across companies--since it's the same source data. 
 
-you can sync different schemas/datasets with different tables at different times if you even want to get that granular. A timestamp file for each schema that you sync will be placed in project folder for seeing sync-status at-a-glance. Each schemafile contains their own credential lookup info, so you can populate different schemafiles to different tenants if you so choose.
+You can sync  schemas/datasets with different tables at different times if you even want to get that granular. A timestamp file for each schema that you sync will be placed in a project folder for seeing sync-status at-a-glance. Each schemafile contains their own credential lookup info, so you can populate different schemafiles to different tenants if you choose to do so.
 
 #### Fetch Definition
 
 
-You can construct your 'fetch' list to contain all the data you want to fetch from Hudu, with any modifications, filters, etc. These can be done per-company or generally (with the same source data in fetch)
+You can construct your 'fetch' list to contain all the data you want to fetch from Hudu, with any modifications, filters, etc. These can be done per-company or generally (with the same source data in fetch).
 
 The default schemafile included with this project has some basic metrics and filter examples. The sky is the limit, however, and you can insert entire functions or even scripts into your filter definitions.
 
@@ -92,7 +87,7 @@ When constructing custom filters, all you have to remember is to return a PSCust
 As long as you follow the pattern, you can calculate anything, anywhere, however you want. The scope of things you can calculate or measure is absolutely massive with just a little creativity!
 <img width="787" height="275" alt="image" src="https://github.com/user-attachments/assets/eb85696f-7862-4bb0-976d-a7c33b1ddec9" />
 
-Per-company calculations do require that the objects you're working with in 'Command' include a company Id, **but that's the only requirement** for secondary per-company filtering
+Per-company calculations do require that the objects you're working with in 'Command' include a company Id, **but that's the only requirement** for secondary per-company filtering.
 
 Fetch Entries require:
 
@@ -100,8 +95,8 @@ Fetch Entries require:
 This is the name you will reference from your table or between tables if reused
 
 ##### Command
-This is the HuduAPI powershell module command needed to get the initial, prefiltered data
-If you want to measure a subset of 'companies', for example, you'd use {Get-HuduCompanies}.
+This is the HuduAPI powershell module command needed to get the initial, prefiltered data. (See [HuduAPI PS Module](https://github.com/Hudu-Technologies-Inc/HuduAPI) for more infromation) 
+For example, if you want to measure a subset of 'companies' you'd use {Get-HuduCompanies}.
 
 ##### Datatype
 This is the datatype that your schema will use in Fabric. These are accepted datatypes in Fabric
@@ -109,7 +104,7 @@ common datatypes for Fabric- Int64, Double, Boolean, DateTime, String
 
 ##### Filter
 This is how you want to filter your base data, describes the subest of command you seek to measure.
-A filter has a (param), which represents the data you get from 'command'. With this, you can count, sort, average, or perform any arithmatic, string, date, or boolean functions you want. Just make sure that the datatype field matches the output of your filter. Your filter can be as long as you want, it's just a way of getting from A (command data) to B (your subset)
+A filter has a (param), which represents the data you get from 'command'. With this, you can count, sort, average, or perform any arithmatic, string, date, or boolean functions you want. Just make sure that the datatype field matches the output of your filter. Your filter can be as long as you want, it's just a way of getting from A (command data) to B (your subset).
 
 
 #### Table Definition(s)
@@ -118,12 +113,12 @@ Here, you define your tables and columns to be in an expected order for your dat
 
 <img width="384" height="298" alt="image" src="https://github.com/user-attachments/assets/b09862b9-a579-4460-8112-6fbcc359ee8a" />
 
-Tables that are 'per-company' are calculated per-company and submitted 1-row-per-company
-Per-Company measurements have two additional columns (company id and company name) injected into them, so you can omit those from your definitions- they are automatic
+Tables that are 'per-company' are calculated per-company and submitted 1-row-per-company.
+Per-Company measurements have two additional columns (company id and company name) injected into them, so you can omit those from your definitions--they are automatic
 
 <img width="2386" height="876" alt="image" src="https://github.com/user-attachments/assets/0bba863e-1e68-497b-91b4-66d648ec5352" />
 
-Fetch data can be used across tabled and can use the same upstream data. For Example, if your fetch data represents the count of articles, if you place that fetch column in a per-company table and a general table, the general table will measure ALL articles with that filter condition, the per-company will measure THAT COMPANY's Articles that match your filter condition.
+Fetch data can be used across tables and can use the same upstream data. For Example, if your fetch data represents the count of articles, if you place that fetch column in a per-company table and a general table, the general table will measure ALL articles with that filter condition, the per-company will measure THAT COMPANY's Articles that match your filter condition.
 
 ---
 
