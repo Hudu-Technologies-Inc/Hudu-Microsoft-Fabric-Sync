@@ -1,5 +1,7 @@
 # Hudu → Microsoft Fabric Connect Script
 
+[original community post, July 2025](https://community.hudu.com/script-library-awpwerdu/post/integrate-hudu-data-into-microsoft-fabric-Nzwstjv8mBpx1Qp)
+
 Connect Hudu datapoints to Microsoft Fabric with **ease and flexibility**.
 
 > 1. **Setup and design** your schema  
