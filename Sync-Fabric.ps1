@@ -68,10 +68,20 @@ $clientId = $clientId ?? $registration.clientId
 $tenantId = $tenantId ?? $registration.tenantId
 if ($null -ne $clientSecret) {
     Set-PrintAndLog -message "client secret was retrieved. Assuming application auth." -Color Green
-    $tokenResult = Get-MsalToken -ClientId $clientId -TenantId $tenantId -ClientSecret $clientSecret -Scopes $scope
-    $accessToken =  $tokenResult.AccessToken
+    $Scopes = "https://analysis.windows.net/powerbi/api/.default"
+    $clientSecretSecure = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+        $tokenResult = Get-MsalToken `
+        -ClientId $clientId `
+        -TenantId $tenantId `
+        -ClientSecret $clientSecretSecure `
+        -Scopes $scopes
+      $accessToken =  $tokenResult.AccessToken
 } else {
     Set-PrintAndLog -message "No client secret was retrieved. Assuming Device Login." -Color Green
+    $Scopes = @(
+    "https://analysis.windows.net/powerbi/api/Workspace.Read.All",
+    "https://analysis.windows.net/powerbi/api/Dataset.ReadWrite.All"
+    )    
     Start-Process "https://microsoft.com/devicelogin"
     $tokenResult = $(Get-MsalToken -ClientId $clientId -TenantId $tenantId -DeviceCode -Scopes $scope)
     $accessToken =  $tokenResult.AccessToken
