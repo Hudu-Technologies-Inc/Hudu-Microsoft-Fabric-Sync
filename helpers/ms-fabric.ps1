@@ -128,7 +128,7 @@ function Set-Workspace {
 
     if ($null -ne $workspace.id -and $(get-azcontext)){
         try {
-            Set-AuthorizedUserForWorkspace -userEmail "$((get-azcontext).account)" -token $token -workspaceId $workspace.id
+            Set-AuthorizedUserForWorkspace -userEmail $($MyEmail ?? "$((get-azcontext).account)") -token $token -workspaceId $workspace.id
         } catch {
             Set-PrintAndLog -message "Was unable to set current user as viewing member of this workspace. Ask your admin to add you in powerBI admin console!" -Color Magenta
         }
@@ -148,19 +148,27 @@ function Set-DataSet {
 
     Set-PrintAndLog -message "Looking for dataset named: $name"
 
+    try {
     $datasets = Invoke-RestMethod -Uri "https://api.powerbi.com/v1.0/myorg/groups/$workspaceId/datasets" -Headers @{ Authorization = "Bearer $token" }
     $dataset = $datasets.value | Where-Object { $_.name -eq $name }
-
+    } catch {
+        Set-PrintAndLog -message "Error retrieving datasets: $($_.Exception.Message)"
+        throw $_
+    }
     if ($null -ne $dataset) {
         Set-PrintAndLog -message "Dataset found: $name (ID: $($dataset.id))"
         return $dataset.id
     }
 
     Set-PrintAndLog -message "Dataset not found. Creating new dataset: $name with schema from $schemaFile - $($schemaJson | ConvertTo-Json -Depth 10)"
+    try {
 
     $dataset = Invoke-RestMethod -Uri "https://api.powerbi.com/v1.0/myorg/groups/$workspaceId/datasets" `
         -Method Post -Headers @{ Authorization = "Bearer $token" } -Body $schemaJson -ContentType "application/json"
-
+    } catch {
+        Set-PrintAndLog -message "Error retrieving datasets: $($_.Exception.Message)"
+        throw $_
+    }
     Set-PrintAndLog -message "Dataset created: $name (ID: $($dataset.id))"
     return $dataset.id
 }
