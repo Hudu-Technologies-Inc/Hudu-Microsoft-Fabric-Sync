@@ -62,7 +62,7 @@ Set-LastSyncedTimestampFile -DirectoryPath $workdir -schemaName $([System.IO.Pat
 $AuthStrategyMessage = Get-AuthStrategyMessage  -clientIdPresent (-not [string]::IsNullOrWhiteSpace($clientId)) -tenantIdPresent (-not [string]::IsNullOrWhiteSpace($tenantId)) -clientSecretPresent (-not [string]::IsNullOrWhiteSpace($clientSecret))
 Set-PrintAndLog -message "$AuthStrategyMessage" -color Magenta
 Get-EnsureModule -name "MSAL.PS"
-Set-LoggedStartupItems
+Set-LoggedStartupItems  -huduapikey $HuduApiKey -huduBaseURL $HuduBaseUrl
 $registration = EnsureRegistration -ClientId $clientId -TenantId $tenantId -delegatedPermissions $delegatedPermissions -ApplicationPermissions $ApplicationPermissions
 $clientId = $clientId ?? $registration.clientId
 $tenantId = $tenantId ?? $registration.tenantId

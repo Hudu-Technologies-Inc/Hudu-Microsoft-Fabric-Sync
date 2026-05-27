@@ -5,9 +5,12 @@ $tmpfolder=$(join-path "$workdir" "tmp")
 $ErroredItemsFolder=$(join-path "$logsFolder" "errored")
 
 function Set-LoggedStartupItems {
-
+    param(
+        [string]$HuduBaseURL,
+        [string]$HuduAPIKey
+    )
     Set-PrintAndLog -message "Checked Powershell Version... $(Get-PSVersionCompatible)" -Color DarkBlue
-    Set-PrintAndLog -message "Imported Hudu Module and checked version... $(Set-HuduModuleInitialized)" -Color DarkBlue
+    Set-PrintAndLog -message "Imported Hudu Module and checked version... $(Set-HuduModuleInitialized -HuduBaseURL $HuduBaseURL -HuduAPIKey $HuduAPIKey)" -Color DarkBlue
 
 }
 function Set-HuduInstance {
@@ -38,7 +41,7 @@ function Set-HuduModuleInitialized {
     param (
             [string]$HAPImodulePath = "C:\Users\$env:USERNAME\Documents\GitHub\HuduAPI\HuduAPI\HuduAPI.psm1",
             [bool]$use_hudu_fork = $true,
-            [version]$RequiredHuduVersion = [version]"2.39.6",
+            [version]$RequiredHuduVersion = [version]"2.42.0",
             $DisallowedVersions = @([version]"2.37.0"),
             [string]$HuduApiRepositoryUrl = $($env:HUDUAPI_REPOSITORY_URL ?? "https://github.com/Hudu-Technologies-Inc/HuduAPI.git"),
             [string]$HuduApiBranch = $($env:HUDUAPI_REPOSITORY_BRANCH ?? "master"),
@@ -47,7 +50,9 @@ function Set-HuduModuleInitialized {
                 Join-Path (
                     $(if ($PSScriptRoot) { $PSScriptRoot } else { (Resolve-Path .).Path })
                 ) 'HAPI.zip'
-            )
+            ),
+        [string]$HuduBaseURL,
+        [string]$HuduAPIKey
         )
     $AllowHuduGalleryFallback = $false
 
@@ -324,7 +329,7 @@ function Set-HuduModuleInitialized {
     }
 
     #Login to Hudu
-    Set-HuduInstance 
+    Set-HuduInstance -HuduBaseURL $HuduBaseURL -HuduAPIKey $HuduAPIKey
 
     # Check we have the correct version
     $CurrentVersion = [version]($(Get-HuduAppInfo).version)
