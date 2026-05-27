@@ -8,12 +8,20 @@ $tenantId = ""
 # use Azure Key Vault for obtaining secrets? (highly reccomended)
 $UseAzureKeyStore=$true
 
-# AZ Vault and secrets config
+# EITHER A: AZ Vault and secrets config
 $AzVault_Name = "your-vaultname"
 $HuduApiKeySecretName = "your-secretname"
 $clientIdSecretName = "clientid-secretname"
 $clientSecretName = "client-secretname"
 $tenantIdSecretName = "tenantid-secretname"
+
+# OR B: direct input (not recommended)
+
+$clientId = ""
+$clientSecret =  ""
+$tenantId = ""
+$HuduAPIKey = ""
+$MyEmail = "myemail@mytenanturl.tld"
 
 # Hudu URL Setup-
 $HuduBaseUrl= "yoururl.huducloud.com"
