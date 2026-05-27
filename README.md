@@ -33,6 +33,8 @@ The rest is **history** — **rich**, **actionable**, **informative** history.
 
 The only file you'll need to edit is your schema definition file. You can edit My-Schema.ps1 included in this repo or you can make a copy of it to reference the original later.
 
+You'll need to be on at least Hudu version 2.42.0, so be sure to update your instance if needed.
+
 ### 1-A. Schema File Variables
 
 In your schemafile, you can configure any/all of the below items-
